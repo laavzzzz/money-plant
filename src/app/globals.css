@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🌿 THEME VARIABLES */
+:root {
+  --background: #fffdf6;
+  --card: #fff3c4;
+  --primary: #facc15;
+  --accent: #fb923c;
+  --success: #22c55e;
+
+  --text-main: #1f2937;
+  --text-light: #6b7280;
+
+  --border: #f3f4f6;
+}
+
+/* 🌙 DARK MODE (optional, future-ready) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f172a;
+    --card: #1e293b;
+    --text-main: #f8fafc;
+    --text-light: #94a3b8;
+    --border: #334155;
+  }
+}
+
+/* 🧠 BASE STYLES */
+body {
+  background: var(--background);
+  color: var(--text-main);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 🌿 COMMON COMPONENT STYLES */
+
+/* Card */
+.card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(250, 204, 21, 0.15);
+}
+
+/* Button */
+.btn-primary {
+  background: linear-gradient(135deg, #facc15, #fb923c);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: scale(1.03);
+}
+
+/* Soft shadow */
+.soft-shadow {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+}
+
+/* Section spacing */
+.section {
+  margin-top: 20px;
+}
+
+/* 🌱 PLANT ANIMATION BASE */
+.plant-bounce {
+  animation: plantBounce 2s infinite ease-in-out;
+}
+
+@keyframes plantBounce {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ✨ Sparkle effect (for saving) */
+.sparkle {
+  animation: sparkle 1s ease-in-out;
+}
+
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
