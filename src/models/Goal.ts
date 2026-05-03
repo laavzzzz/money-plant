@@ -1,16 +1,21 @@
-import mongoose, { Schema, model, models } from 'mongoose';
+import mongoose, { Schema, models, model } from "mongoose";
 
-// Define the structure for your savings goals
-const GoalSchema = new Schema({
-  title: { type: String, required: true },
-  target: { type: Number, required: true },
-  saved: { type: Number, default: 0 },
-  emoji: { type: String, default: '🎯' },
-  color: { type: String, default: 'bg-blue-100' },
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-}, { timestamps: true });
+const GoalSchema = new Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
-// Ensure the file is recognized as a module by exporting the model
-const Goal = models.Goal || model('Goal', GoalSchema);
+    title: { type: String, required: true },
+    targetAmount: { type: Number, required: true },
+    currentAmount: { type: Number, default: 0 },
 
-export default Goal;
+    deadline: { type: Date },
+  },
+  { timestamps: true }
+);
+
+export const Goal =
+  models.Goal || model("Goal", GoalSchema);
