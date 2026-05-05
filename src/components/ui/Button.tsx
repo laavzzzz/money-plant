@@ -1,23 +1,108 @@
 "use client";
 
-import { ButtonHTMLAttributes } from "react";
+import {
+  ButtonHTMLAttributes,
+  ReactNode,
+  forwardRef,
+} from "react";
+import clsx from "clsx";
 
-type ButtonProps = {
-  children: React.ReactNode;
-  className?: string;
+/* 🧠 TYPES */
+type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Size = "sm" | "md" | "lg";
+
+type Props = {
+  children: ReactNode;
+  variant?: Variant;
+  size?: Size;
+
+  loading?: boolean;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
+
+  fullWidth?: boolean;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
-export default function Button({
-  children,
-  className = "",
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      className={`w-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white py-3 rounded-full font-semibold shadow-md hover:scale-[1.03] active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
+/* 🎨 VARIANT STYLES */
+const variantStyles: Record<Variant, string> = {
+  primary:
+    "bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md",
+
+  secondary:
+    "bg-white/60 backdrop-blur border border-gray-200 text-gray-800",
+
+  ghost:
+    "bg-transparent text-gray-600 hover:bg-gray-100",
+
+  danger:
+    "bg-red-500 text-white shadow-md",
+};
+
+/* 📏 SIZE STYLES */
+const sizeStyles: Record<Size, string> = {
+  sm: "text-sm px-4 py-2",
+  md: "text-sm px-5 py-3",
+  lg: "text-base px-6 py-4",
+};
+
+/* 🔘 COMPONENT */
+const Button = forwardRef<HTMLButtonElement, Props>(
+  (
+    {
+      children,
+      variant = "primary",
+      size = "md",
+      loading = false,
+      disabled = false,
+      leftIcon,
+      rightIcon,
+      fullWidth = true,
+      className,
+      ...props
+    },
+    ref
+  ) => {
+    const isDisabled = disabled || loading;
+
+    return (
+      <button
+        ref={ref}
+        disabled={isDisabled}
+        className={clsx(
+          "flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 active:scale-[0.97]",
+          
+          fullWidth && "w-full",
+          
+          variantStyles[variant],
+          sizeStyles[size],
+
+          isDisabled && "opacity-60 cursor-not-allowed",
+          "focus:outline-none focus:ring-2 focus:ring-yellow-300",
+
+          className
+        )}
+        {...props}
+      >
+        {/* ⏳ LOADING */}
+        {loading ? (
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            {/* ⬅️ LEFT ICON */}
+            {leftIcon && <span>{leftIcon}</span>}
+
+            {/* TEXT */}
+            <span>{children}</span>
+
+            {/* ➡️ RIGHT ICON */}
+            {rightIcon && <span>{rightIcon}</span>}
+          </>
+        )}
+      </button>
+    );
+  }
+);
+
+Button.displayName = "Button";
+
+export default Button;
