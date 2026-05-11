@@ -2,15 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  LogIn, 
-  Mail, 
-  Phone, 
-  ArrowLeft, 
-  CheckCircle2, 
-  ChevronRight,
-  
-} from "lucide-react";
+import { ArrowLeft, AtSign, PhoneCall, ChevronRight, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -85,7 +77,7 @@ export default function LoginPage() {
                 >
                   <label className="text-[10px] font-black uppercase text-gray-400 ml-5 tracking-widest">Secret Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                    <AtSign className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                     <input 
                       type="email" 
                       placeholder="name@moneyplant.io"
@@ -105,7 +97,7 @@ export default function LoginPage() {
                   <div className="flex gap-2">
                     <div className="bg-gray-100 px-5 flex items-center rounded-3xl font-black text-xs italic">+91</div>
                     <div className="relative flex-1">
-                      <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                      <PhoneCall className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                       <input 
                         type="tel" 
                         placeholder="00000 00000"
@@ -149,7 +141,7 @@ export default function LoginPage() {
 
       {/* 🔐 Trust Footer */}
       <div className="absolute bottom-10 flex items-center gap-2 opacity-20 grayscale select-none">
-        <CheckCircle2 size={14} />
+        <CheckCircle size={14} />
         <span className="text-[10px] font-black uppercase tracking-[0.5em] text-black">End-to-End Secure Aura</span>
       </div>
     </main>

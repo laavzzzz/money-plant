@@ -1,4 +1,4 @@
-import { PLANT_LEVELS } from "@/constants/config";
+import { PLANT_LEVELS } from "@/lib/constants/config";
 
 export function getPlantStage(savings: number) {
   return (
