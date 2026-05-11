@@ -1,54 +1,93 @@
 "use client";
 
-import { InputHTMLAttributes, forwardRef } from "react";
+import React, { InputHTMLAttributes, forwardRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
+/* 🧠 TYPES */
 type InputProps = {
   label?: string;
   error?: string;
   icon?: React.ReactNode;
+  containerClassName?: string;
 } & InputHTMLAttributes<HTMLInputElement>;
 
+/* 🧊 COMPONENT */
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon, className = "", ...props }, ref) => {
+  ({ label, error, icon, className = "", containerClassName, ...props }, ref) => {
+    const [isFocused, setIsFocused] = useState(false);
+
     return (
-      <div className="w-full space-y-1">
-        {/* 🏷 Label */}
+      <div className={cn("w-full space-y-2 group", containerClassName)}>
+        {/* 🏷 LABEL (Gen Z Style: Bold & Slightly Spaced) */}
         {label && (
-          <label className="text-sm font-medium text-gray-600">
+          <label className="block text-xs font-bold uppercase tracking-widest text-text-light/70 ml-2 transition-colors group-focus-within:text-primary">
             {label}
           </label>
         )}
 
-        {/* 📦 Input Wrapper */}
+        {/* 📦 INPUT WRAPPER */}
         <div className="relative">
-          {/* Icon */}
+          {/* ✨ BACKGROUND GLOW (Activated on Focus) */}
+          <div 
+            className={cn(
+              "absolute inset-0 rounded-[22px] blur-lg transition-all duration-500 opacity-0 -z-10",
+              isFocused ? "bg-primary/20 opacity-100" : "bg-transparent",
+              error && "bg-danger/20"
+            )} 
+          />
+
+          {/* ICON SECTION */}
           {icon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <span className={cn(
+              "absolute left-4 top-1/2 -translate-y-1/2 z-20 transition-colors duration-300",
+              isFocused ? "text-primary" : "text-gray-400",
+              error && "text-danger"
+            )}>
               {icon}
             </span>
           )}
 
-          {/* Input */}
+          {/* THE ACTUAL INPUT */}
           <input
             ref={ref}
-            className={`
-              w-full bg-white border border-gray-200 rounded-2xl
-              py-3 px-4 text-sm outline-none
-              placeholder:text-gray-400
-              focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100
-              transition
-              ${icon ? "pl-10" : ""}
-              ${error ? "border-red-400 focus:ring-red-100" : ""}
-              ${className}
-            `}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className={cn(
+              "w-full bg-white/60 dark:bg-white/5 backdrop-blur-md border-2 rounded-[22px]",
+              "py-4 px-5 text-sm font-medium outline-none transition-all duration-300",
+              "placeholder:text-gray-400 text-text-main",
+              "border-white/80 dark:border-white/10",
+              
+              /* Focus State */
+              "focus:border-primary/50 focus:bg-white/90 dark:focus:bg-white/10",
+              
+              /* Icon Padding */
+              icon ? "pl-12" : "pl-6",
+              
+              /* Error State */
+              error && "border-danger/50 focus:border-danger text-danger placeholder:text-danger/40",
+              
+              className
+            )}
             {...props}
           />
         </div>
 
-        {/* ❌ Error */}
-        {error && (
-          <p className="text-xs text-red-500 mt-1">{error}</p>
-        )}
+        {/* ❌ ERROR MESSAGE (Animated) */}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.p 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              className="text-[11px] font-bold text-danger ml-4 flex items-center gap-1"
+            >
+              <span className="w-1 h-1 bg-danger rounded-full animate-pulse" />
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
     );
   }

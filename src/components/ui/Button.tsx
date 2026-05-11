@@ -5,48 +5,48 @@ import {
   ReactNode,
   forwardRef,
 } from "react";
-import clsx from "clsx";
+import { motion, MotionProps } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 /* 🧠 TYPES */
-type Variant = "primary" | "secondary" | "ghost" | "danger";
-type Size = "sm" | "md" | "lg";
+type Variant = "primary" | "secondary" | "vibe" | "ghost" | "danger" | "outline";
+type Size = "sm" | "md" | "lg" | "icon";
 
-type Props = {
-  children: ReactNode;
+type ButtonProps = {
+  children?: ReactNode;
   variant?: Variant;
   size?: Size;
-
   loading?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
-
   fullWidth?: boolean;
-} & ButtonHTMLAttributes<HTMLButtonElement>;
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onAnimationStart" | "onDrag" | "onDragStart" | "onDragEnd"> & 
+  MotionProps;
 
-/* 🎨 VARIANT STYLES */
+/* 🎨 STYLE MAPS */
 const variantStyles: Record<Variant, string> = {
-  primary:
-    "bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md",
-
-  secondary:
-    "bg-white/60 backdrop-blur border border-gray-200 text-gray-800",
-
-  ghost:
-    "bg-transparent text-gray-600 hover:bg-gray-100",
-
-  danger:
-    "bg-red-500 text-white shadow-md",
+  primary: "bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] text-white shadow-[0_8px_20px_rgba(195,172,255,0.35)] hover:bg-right",
+  
+  vibe: "bg-accent text-vibe-dark shadow-[0_8px_20px_rgba(178,242,187,0.3)] border border-white/20",
+  
+  secondary: "glass-panel bg-white/60 dark:bg-white/10 border-white/40 text-text-main hover:bg-white/80",
+  
+  outline: "bg-transparent border-2 border-primary/40 text-primary hover:bg-primary/5",
+  
+  ghost: "bg-transparent text-text-light hover:bg-black/5 dark:hover:bg-white/5",
+  
+  danger: "bg-danger text-white shadow-[0_8px_20px_rgba(255,155,155,0.3)]",
 };
 
-/* 📏 SIZE STYLES */
 const sizeStyles: Record<Size, string> = {
-  sm: "text-sm px-4 py-2",
-  md: "text-sm px-5 py-3",
-  lg: "text-base px-6 py-4",
+  sm: "text-xs px-4 py-2 h-9",
+  md: "text-sm px-6 py-3 h-12",
+  lg: "text-base px-8 py-4 h-14 font-bold",
+  icon: "p-3 h-12 w-12",
 };
 
 /* 🔘 COMPONENT */
-const Button = forwardRef<HTMLButtonElement, Props>(
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
       children,
@@ -56,7 +56,7 @@ const Button = forwardRef<HTMLButtonElement, Props>(
       disabled = false,
       leftIcon,
       rightIcon,
-      fullWidth = true,
+      fullWidth = false,
       className,
       ...props
     },
@@ -65,40 +65,67 @@ const Button = forwardRef<HTMLButtonElement, Props>(
     const isDisabled = disabled || loading;
 
     return (
-      <button
-        ref={ref}
+      <motion.button
+        ref={ref as any}
         disabled={isDisabled}
-        className={clsx(
-          "flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 active:scale-[0.97]",
+        
+        /* ✨ HAPTIC MOTION */
+        whileHover={{ scale: 1.02, y: -2 }}
+        whileTap={{ scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+
+        className={cn(
+          "relative flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-500 overflow-hidden select-none",
+          "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2",
           
           fullWidth && "w-full",
-          
           variantStyles[variant],
           sizeStyles[size],
-
-          isDisabled && "opacity-60 cursor-not-allowed",
-          "focus:outline-none focus:ring-2 focus:ring-yellow-300",
-
+          isDisabled && "opacity-50 cursor-not-allowed grayscale-[0.5]",
           className
         )}
         {...props}
       >
-        {/* ⏳ LOADING */}
+        {/* 🪄 SHIMMER EFFECT FOR PRIMARY BUTTON */}
+        {variant === 'primary' && !isDisabled && (
+          <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite] pointer-events-none" />
+        )}
+
+        {/* ⏳ LOADING STATE */}
         {loading ? (
-          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            {size !== 'icon' && <span>Loading...</span>}
+          </div>
         ) : (
           <>
             {/* ⬅️ LEFT ICON */}
-            {leftIcon && <span>{leftIcon}</span>}
+            {leftIcon && (
+              <motion.span 
+                initial={{ x: -5, opacity: 0 }} 
+                animate={{ x: 0, opacity: 1 }}
+                className="flex shrink-0"
+              >
+                {leftIcon}
+              </motion.span>
+            )}
 
             {/* TEXT */}
-            <span>{children}</span>
+            <span className="relative z-10 truncate">{children}</span>
 
             {/* ➡️ RIGHT ICON */}
-            {rightIcon && <span>{rightIcon}</span>}
+            {rightIcon && (
+              <motion.span 
+                initial={{ x: 5, opacity: 0 }} 
+                animate={{ x: 0, opacity: 1 }}
+                className="flex shrink-0"
+              >
+                {rightIcon}
+              </motion.span>
+            )}
           </>
         )}
-      </button>
+      </motion.button>
     );
   }
 );

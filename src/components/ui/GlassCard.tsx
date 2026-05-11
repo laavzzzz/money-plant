@@ -1,53 +1,55 @@
 "use client";
 
-import { motion, MotionProps } from "framer-motion";
+import { motion, MotionProps, AnimatePresence } from "framer-motion";
 import {
   HTMLAttributes,
   ReactNode,
   forwardRef,
   KeyboardEvent,
 } from "react";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 
 /* 🧠 TYPES */
-type Variant = "glass" | "solid" | "outline";
-type Elevation = "none" | "sm" | "md" | "lg";
+type Variant = "glass" | "solid" | "outline" | "neon";
+type Elevation = "none" | "sm" | "md" | "lg" | "vibe";
 
 type GlassCardProps = {
   children: ReactNode;
   className?: string;
-
   variant?: Variant;
   elevation?: Elevation;
-
   hover?: boolean;
   clickable?: boolean;
   loading?: boolean;
+  glowColor?: string; // For the neon variant
 } & Omit<HTMLAttributes<HTMLDivElement>, "onAnimationStart"> &
   MotionProps;
 
 /* 🎨 STYLE MAPS */
 const variantStyles: Record<Variant, string> = {
-  glass: "glass-card",
-  solid: "bg-white dark:bg-gray-900 rounded-[28px]",
-  outline:
-    "bg-transparent border border-gray-200 dark:border-gray-700 rounded-[28px]",
+  glass: "glass-panel bg-white/65 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10",
+  solid: "bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-800",
+  outline: "bg-transparent border-2 border-primary/20 dark:border-primary/10",
+  neon: "bg-white/80 dark:bg-black/80 border-2 border-primary/30 shadow-[0_0_20px_rgba(195,172,255,0.2)]",
 };
 
 const elevationStyles: Record<Elevation, string> = {
   none: "",
   sm: "shadow-sm",
-  md: "soft-shadow",
-  lg: "shadow-xl",
+  md: "shadow-vibe",
+  lg: "shadow-float",
+  vibe: "shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]",
 };
 
 /* 🎬 PREMIUM MOTION PRESET */
 const motionPreset: MotionProps = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
+  initial: { opacity: 0, y: 15, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, scale: 0.98 },
   transition: {
-    duration: 0.35,
-    ease: [0.16, 1, 0.3, 1], // 💎 premium cubic-bezier
+    type: "spring",
+    stiffness: 260,
+    damping: 20,
   },
 };
 
@@ -62,6 +64,7 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
       hover = true,
       clickable = false,
       loading = false,
+      glowColor,
       onClick,
       ...rest
     },
@@ -70,7 +73,6 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
     /* ⌨️ KEYBOARD SUPPORT */
     const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
       if (!clickable) return;
-
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         onClick?.(e as any);
@@ -80,23 +82,23 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
     return (
       <motion.div
         ref={ref}
-
-        /* 🎬 ENTRY */
         {...motionPreset}
-
-        /* ✨ INTERACTION */
-        whileHover={hover ? { scale: 1.02 } : undefined}
+        
+        /* ✨ INTERACTION PHYSICS */
+        whileHover={hover ? { 
+          y: -6, 
+          scale: 1.01,
+          transition: { type: "spring", stiffness: 400, damping: 10 }
+        } : undefined}
         whileTap={clickable ? { scale: 0.97 } : undefined}
 
-        /* 🎨 STYLES */
-        className={clsx(
-          "relative overflow-hidden p-5 transition-all duration-300",
+        /* 🎨 DYNAMIC STYLING */
+        className={cn(
+          "relative overflow-hidden p-6 rounded-vibe transition-all duration-500",
           variantStyles[variant],
           elevationStyles[elevation],
-          hover && "card-hover",
-          clickable &&
-            "cursor-pointer active:scale-[0.97] focus:outline-none",
-          loading && "pointer-events-none opacity-70",
+          clickable && "cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          loading && "pointer-events-none",
           className
         )}
 
@@ -105,21 +107,40 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
         tabIndex={clickable ? 0 : undefined}
         onKeyDown={handleKeyDown}
         onClick={onClick}
-
         {...rest}
       >
         {/* 🌫️ LOADING OVERLAY */}
-        {loading && (
-          <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-20">
-            <div className="w-6 h-6 border-2 border-gray-300 border-t-yellow-400 rounded-full animate-spin" />
-          </div>
+        <AnimatePresence>
+          {loading && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-md flex items-center justify-center z-30"
+            >
+              <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ✨ DYNAMIC LIGHT REFLECTION (The "Lovable" look) */}
+        <div 
+          className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10" 
+          aria-hidden="true"
+        />
+
+        {/* 📦 CONTENT CONTAINER */}
+        <div className="relative z-20 w-full h-full">
+          {children}
+        </div>
+
+        {/* 🪄 BACKGROUND ORNAMENT (Subtle Glow) */}
+        {variant === 'neon' && (
+           <div 
+            className="absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-20 pointer-events-none rounded-full"
+            style={{ backgroundColor: glowColor || 'var(--primary)' }}
+           />
         )}
-
-        {/* ✨ SHINE EFFECT */}
-        <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-20 transition duration-300 pointer-events-none" />
-
-        {/* 📦 CONTENT */}
-        <div className="relative z-10">{children}</div>
       </motion.div>
     );
   }

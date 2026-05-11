@@ -1,228 +1,158 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* 🌿 ================= DESIGN TOKENS ================= */
-:root {
-  /* 🎨 COLORS */
-  --bg-main: #fffdf6;
-  --bg-accent: #fff7d6;
+/* 🌿 ================= DESIGN SYSTEM TOKENS ================= */
+@theme {
+  /* Syncing Tailwind v4 with your Vibe Palette */
+  --color-primary: #C3ACFF;
+  --color-secondary: #FFB5E8;
+  --color-accent: #FFF1AC;
+  --color-success: #B2F2BB;
+  --color-danger: #FF9B9B;
+  
+  --radius-vibe: 32px;
+  --radius-md: 18px;
 
-  --text-main: #1f2937;
-  --text-light: #6b7280;
+  --animate-vibe-float: float 5s ease-in-out infinite;
+  --animate-text-shine: text-shine 5s linear infinite;
 
-  --primary: #facc15;
-  --secondary: #fb923c;
-  --success: #22c55e;
-  --danger: #ef4444;
-
-  /* 🧊 GLASS */
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.6);
-
-  /* 🔲 RADIUS */
-  --radius-lg: 28px;
-  --radius-md: 16px;
-  --radius-sm: 10px;
-
-  /* 📏 SPACING */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-
-  /* 🌫 SHADOWS */
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.05),
-                 0 4px 12px rgba(0, 0, 0, 0.04);
-
-  --shadow-deep: 0 20px 60px rgba(0, 0, 0, 0.12);
-
-  /* 🎬 MOTION */
-  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-fast: 0.2s var(--ease-premium);
-  --transition-smooth: 0.35s var(--ease-premium);
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes text-shine {
+    to { background-position: 200% center; }
+  }
+  @keyframes grow-progress {
+    from { width: 0%; }
+  }
 }
 
-/* 🌙 ================= DARK MODE ================= */
-@media (prefers-color-scheme: dark) {
+/* 🌍 GLOBAL RESET & THEME VARIABLES */
+@layer base {
   :root {
-    --bg-main: #0f172a;
-    --bg-accent: #1e293b;
+    /* Light Mode */
+    --bg-main: #FDFDFD;
+    --bg-accent: #FFFDF0;
+    --text-main: #121214;
+    --text-light: #64748b;
 
-    --text-main: #f8fafc;
-    --text-light: #94a3b8;
+    /* Glassmorphism */
+    --glass-bg: rgba(255, 255, 255, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-reflection: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+    
+    --shadow-vibe: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+    --shadow-float: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+  }
 
-    --glass-bg: rgba(30, 41, 59, 0.6);
+  .dark {
+    --bg-main: #0C0C0E;
+    --bg-accent: #16161A;
+    --text-main: #F8FAFC;
+    --text-light: #94A3B8;
+    --glass-bg: rgba(22, 22, 26, 0.8);
     --glass-border: rgba(255, 255, 255, 0.08);
   }
-}
 
-/* 🌍 ================= BASE ================= */
-html,
-body {
-  padding: 0;
-  margin: 0;
-  background: var(--bg-main);
-  color: var(--text-main);
-  font-family: system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  scroll-behavior: smooth;
-}
-
-/* 🎨 ================= BACKGROUND ================= */
-.gradient-bg {
-  background:
-    radial-gradient(1200px 600px at 50% -10%, #fff3c4 0%, transparent 60%),
-    linear-gradient(180deg, #fffdf6 0%, #fffaf0 100%);
-}
-
-/* 🧊 ================= GLASS SYSTEM ================= */
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border);
-  transition: var(--transition-smooth);
-}
-
-/* 🌫 ================= SHADOWS ================= */
-.soft-shadow {
-  box-shadow: var(--shadow-soft);
-}
-
-.deep-shadow {
-  box-shadow: var(--shadow-deep);
-}
-
-/* ✨ ================= INTERACTIONS ================= */
-.card-hover {
-  transition: var(--transition-smooth);
-}
-
-.card-hover:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: var(--shadow-deep);
-}
-
-/* 🧠 ================= NEUMORPHISM (BONUS) ================= */
-.neu {
-  background: #f5f5f5;
-  box-shadow:
-    8px 8px 20px #e0e0e0,
-    -8px -8px 20px #ffffff;
-  border-radius: var(--radius-lg);
-}
-
-/* 🌱 ================= BUTTON ================= */
-.btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: white;
-  padding: 12px 20px;
-  border-radius: 999px;
-  font-weight: 600;
-  transition: var(--transition-fast);
-  box-shadow: 0 8px 20px rgba(250, 204, 21, 0.35);
-}
-
-.btn-primary:hover {
-  transform: scale(1.04);
-}
-
-.btn-primary:active {
-  transform: scale(0.96);
-}
-
-/* 🌿 ================= INPUT ================= */
-.input {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid #e5e7eb;
-  background: white;
-  transition: var(--transition-fast);
-}
-
-.input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.2);
-}
-
-/* 🌟 ================= SCROLL ================= */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #e5e7eb;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #d1d5db;
-}
-
-/* 📱 MOBILE POLISH */
-main::-webkit-scrollbar {
-  display: none;
-}
-
-/* 🌸 ================= ANIMATIONS ================= */
-.float {
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-  100% { transform: translateY(0); }
-}
-
-.fade-in {
-  animation: fadeIn 0.4s var(--ease-premium);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  body {
+    background: var(--bg-main);
+    color: var(--text-main);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-.pulse-soft {
-  animation: pulseSoft 1.5s infinite;
+/* 🎨 ================= THE "VIBE" COMPONENTS ================= */
+@layer components {
+  /* Animated Mesh Background (The "Aura") */
+  .vibe-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    opacity: 0.5;
+    pointer-events: none;
+    background: 
+      radial-gradient(at 0% 0%, hsla(253,16%,90%,1) 0, transparent 50%), 
+      radial-gradient(at 100% 0%, hsla(225,39%,90%,1) 0, transparent 50%), 
+      radial-gradient(at 100% 100%, hsla(339,49%,90%,1) 0, transparent 50%), 
+      radial-gradient(at 0% 100%, hsla(180,100%,90%,1) 0, transparent 50%);
+    filter: blur(80px);
+  }
+
+  /* 🧊 THE GLASS SYSTEM */
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-vibe);
+    border-radius: var(--radius-vibe);
+  }
+
+  /* ✨ HAPTIC INTERACTIONS */
+  .haptic-card {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    cursor: pointer;
+  }
+
+  .haptic-card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: var(--shadow-float);
+  }
+
+  .haptic-card:active {
+    transform: scale(0.97);
+  }
+
+  /* 🌟 PREMIUM GRADIENT TEXT */
+  .text-gradient {
+    background: linear-gradient(to right, #C3ACFF, #FFB5E8, #FFF1AC);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    background-size: 200% auto;
+    animation: text-shine 5s linear infinite;
+  }
+
+  /* 🌫 PREMIUM GRAIN OVERLAY */
+  .grain-overlay::after {
+    content: "";
+    position: fixed;
+    inset: -100%;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
 }
 
-@keyframes pulseSoft {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
-}
+/* 🎬 UTILITY CLASSES */
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .animate-grow {
+    animation: grow-progress 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
 
-/* 🌟 ================= UTILITIES ================= */
-.glow-yellow {
-  background: radial-gradient(circle, #fef08a 0%, transparent 70%);
-}
-
-.glow-green {
-  background: radial-gradient(circle, #bbf7d0 0%, transparent 70%);
-}
-
-.text-muted {
-  color: var(--text-light);
-}
-
-.section {
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-}
-
-/* ♿ ================= ACCESSIBILITY ================= */
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  .label-caps {
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-light);
+  }
 }

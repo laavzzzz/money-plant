@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { PLANT_LEVELS } from "@/constants/config";
+import { PLANT_LEVELS } from "@/lib/constants/config";
 import { Transaction } from "./useTransactions";
 
 /* 🧠 CONFIG */
