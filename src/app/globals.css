@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* 🌿 ================= DESIGN SYSTEM TOKENS ================= */
+/* 🌿 ================= DESIGN SYSTEM TOKENS (Tailwind v4) ================= */
 @theme {
-  /* Syncing Tailwind v4 with your Vibe Palette */
+  /* Vibe Palette Sync */
   --color-primary: #C3ACFF;
   --color-secondary: #FFB5E8;
   --color-accent: #FFF1AC;
@@ -12,8 +12,10 @@
   --radius-vibe: 32px;
   --radius-md: 18px;
 
+  /* Premium Animations */
   --animate-vibe-float: float 5s ease-in-out infinite;
   --animate-text-shine: text-shine 5s linear infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
@@ -27,16 +29,16 @@
   }
 }
 
-/* 🌍 GLOBAL RESET & THEME VARIABLES */
+/* 🌍 GLOBAL RESET & DYNAMIC THEME ENGINE */
 @layer base {
   :root {
-    /* Light Mode */
+    /* Light Mode - Soft & Airy */
     --bg-main: #FDFDFD;
     --bg-accent: #FFFDF0;
     --text-main: #121214;
     --text-light: #64748b;
 
-    /* Glassmorphism */
+    /* Glassmorphism Logic */
     --glass-bg: rgba(255, 255, 255, 0.65);
     --glass-border: rgba(255, 255, 255, 0.5);
     --glass-reflection: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
@@ -46,10 +48,12 @@
   }
 
   .dark {
+    /* Dark Mode - Deep & Professional */
     --bg-main: #0C0C0E;
     --bg-accent: #16161A;
     --text-main: #F8FAFC;
     --text-light: #94A3B8;
+    
     --glass-bg: rgba(22, 22, 26, 0.8);
     --glass-border: rgba(255, 255, 255, 0.08);
   }
@@ -67,34 +71,56 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition: background-color 0.5s ease;
   }
 }
 
-/* 🎨 ================= THE "VIBE" COMPONENTS ================= */
+/* 🎨 ================= THE "LOVABLE" COMPONENTS ================= */
 @layer components {
   /* Animated Mesh Background (The "Aura") */
   .vibe-canvas {
     position: fixed;
     inset: 0;
-    z-index: -10;
-    opacity: 0.5;
+    z-index: -1;
+    opacity: 0.6;
     pointer-events: none;
     background: 
       radial-gradient(at 0% 0%, hsla(253,16%,90%,1) 0, transparent 50%), 
       radial-gradient(at 100% 0%, hsla(225,39%,90%,1) 0, transparent 50%), 
       radial-gradient(at 100% 100%, hsla(339,49%,90%,1) 0, transparent 50%), 
       radial-gradient(at 0% 100%, hsla(180,100%,90%,1) 0, transparent 50%);
-    filter: blur(80px);
+    filter: blur(100px);
+  }
+
+  /* Deep Dark support for vibe-canvas */
+  .dark .vibe-canvas {
+    background: 
+      radial-gradient(at 0% 0%, hsla(253,30%,15%,1) 0, transparent 50%), 
+      radial-gradient(at 100% 0%, hsla(225,30%,15%,1) 0, transparent 50%), 
+      radial-gradient(at 100% 100%, hsla(339,30%,15%,1) 0, transparent 50%), 
+      radial-gradient(at 0% 100%, hsla(180,30%,15%,1) 0, transparent 50%);
   }
 
   /* 🧊 THE GLASS SYSTEM */
   .glass-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid var(--glass-border);
     box-shadow: var(--shadow-vibe);
     border-radius: var(--radius-vibe);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle subtle highlight on top of glass */
+  .glass-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--glass-reflection);
+    pointer-events: none;
+    opacity: 0.5;
   }
 
   /* ✨ HAPTIC INTERACTIONS */
@@ -104,7 +130,7 @@
   }
 
   .haptic-card:hover {
-    transform: translateY(-6px) scale(1.01);
+    transform: translateY(-4px) scale(1.01);
     box-shadow: var(--shadow-float);
   }
 
@@ -123,14 +149,20 @@
   }
 
   /* 🌫 PREMIUM GRAIN OVERLAY */
+  .grain-overlay {
+    position: relative;
+  }
+
   .grain-overlay::after {
     content: "";
     position: fixed;
-    inset: -100%;
+    inset: 0;
     z-index: 9999;
     pointer-events: none;
-    opacity: 0.025;
+    opacity: 0.03;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    /* Ensures dark mode gets visible grain too */
+    filter: contrast(150%) brightness(100%);
   }
 }
 
@@ -149,10 +181,24 @@
   }
 
   .label-caps {
-    font-size: 10px;
-    font-weight: 900;
+    font-size: 11px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.15em;
     color: var(--text-light);
+    opacity: 0.8;
+  }
+
+  /* Bento Grid Utility for full alignment */
+  .bento-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  @media (min-width: 768px) {
+    .bento-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
   }
 }

@@ -1,10 +1,7 @@
-/// <reference types="lucide-react" />
 /// <reference types="next" />
 /// <reference types="next/navigation" />
 
-import "lucide-react";
-
-// 🎨 CSS & Style Modules
+// 🎨 CSS & STYLE MODULES
 declare module "*.css" {
   const content: { [className: string]: string };
   export default content;
@@ -15,7 +12,7 @@ declare module "*.scss" {
   export default content;
 }
 
-// 🖼️ Static Assets & Media
+// 🖼️ STATIC ASSETS & MEDIA
 declare module "*.svg" {
   import React from "react";
   export const ReactComponent: React.FC<React.SVGProps<SVGSVGElement>>;
@@ -48,7 +45,7 @@ declare module "*.webp" {
   export default content;
 }
 
-// 🎬 Animations & Interactive
+// 🎬 ANIMATIONS & INTERACTIVE (Lottie Support)
 declare module "*.json" {
   const value: any;
   export default value;
@@ -59,27 +56,9 @@ declare module "*.lottie" {
   export default content;
 }
 
-// 🔮 Global Application Types
+// 🔮 GLOBAL APPLICATION TYPES
 declare type Theme = "light" | "dark" | "system";
 
 interface Window {
-  ethereum?: any; 
-}
-
-// 🛠️ Lucide-React Direct Type Support
-declare module "lucide-react" {
-  import { FC, SVGProps } from "react";
-  export interface IconProps extends SVGProps<SVGSVGElement> {
-    size?: string | number;
-    color?: string;
-    strokeWidth?: string | number;
-  }
-  export type Icon = FC<IconProps>;
-  export const ChevronRight: Icon;
-  export const AtSign: Icon;
-  export const PhoneCall: Icon;
-  export const ArrowLeft: Icon;
-  export const CheckCircle: Icon;
-  // This allows any other icon name as well
-  export const [key, string]: Icon;
+  ethereum?: any; // For Web3/Crypto features
 }

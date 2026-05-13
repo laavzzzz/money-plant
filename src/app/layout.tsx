@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { Toaster } from "sonner"; // Premium toast notifications
-import { ThemeProvider } from "../components/theme-provider"; // For Night Vibe
-import PageTransition from "../components/page-transition"; // For smooth page swaps
+import { Toaster } from "sonner";
+import { ThemeProvider } from "../components/theme-provider";
+import PageTransition from "../components/page-transition";
+import VibeCheck from "../components/ai/VibeCheck"; // 🤖 The AI Companion
 import { cn } from "@/lib/utils";
-import "./globals.css";
+import "@/app/globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -22,9 +23,8 @@ export const metadata: Metadata = {
   keywords: ["Expense Tracker", "Gen Z Finance", "Gamified Savings", "MoneyPlant", "Fintech"],
   authors: [{ name: "MoneyPlant Team" }],
   creator: "Ananya Sharma",
-  metadataBase: new URL("https://moneyplant.dev"), // Change to your real domain
+  metadataBase: new URL("https://moneyplant.dev"),
   
-  // Social Media Previews (OpenGraph)
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -35,7 +35,6 @@ export const metadata: Metadata = {
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "MoneyPlant Preview" }],
   },
   
-  // Twitter / X Integration
   twitter: {
     card: "summary_large_image",
     title: "MoneyPlant 🌿",
@@ -43,7 +42,6 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
   },
 
-  // Apple & PWA Optimization
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -61,7 +59,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: "cover", // Vital for iPhone notches
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -79,40 +77,50 @@ export default function RootLayout({
           "grain-overlay" 
         )}
       >
-        {/* 🌙 THEME PROVIDER: Wraps everything for Night Vibe support */}
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
-          {/* 🎨 BACKGROUND AURA */}
-          <div className="vibe-canvas fixed inset-0" aria-hidden="true" />
+          {/* 🎨 GLOBAL BACKGROUND ENGINE */}
+          <div className="vibe-canvas fixed inset-0 z-0" aria-hidden="true" />
 
           {/* 🚀 MAIN APP STRUCTURE */}
-          <div className="relative flex min-h-[100dvh] flex-col">
-            {/* 🎬 PAGE TRANSITIONS: Adds smooth fade/slide between routes */}
+          <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden">
+            
+            {/* 🎬 PAGE CONTENT */}
             <PageTransition>
-              <main className="flex-1 relative z-10">
+              <main className="flex-1 relative z-10 w-full">
                 {children}
               </main>
             </PageTransition>
 
-            {/* 📱 SAFE AREA SPACING (Bottom Nav clearance) */}
+            {/* 🤖 GLOBAL AI COMPANION (VibeCheck)
+                Placed outside main to stay persistent across page swaps 
+            */}
+            <VibeCheck />
+
+            {/* 📱 SAFE AREA SPACING */}
             <div className="h-[env(safe-area-inset-bottom)]" />
           </div>
 
-          {/* 🔔 PREMIUM TOASTS: For Level Ups, Success, and Errors */}
+          {/* 🔔 PREMIUM TOAST NOTIFICATIONS */}
           <Toaster 
             position="top-center" 
             toastOptions={{
-              className: "glass-panel !rounded-[24px] !border-none !shadow-xl !font-bold",
-              style: { background: 'var(--glass-bg)', color: 'var(--text-main)' }
+              className: "glass-panel !rounded-[28px] !border-none !shadow-2xl !font-bold !px-6 !py-4",
+              style: { 
+                background: 'rgba(255, 255, 255, 0.4)', 
+                backdropFilter: 'blur(20px)',
+                color: 'var(--text-main)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }
             }}
           />
         </ThemeProvider>
 
-        {/* 🏗️ SVG FILTER SYSTEM (Internal rendering engine for UI effects) */}
+        {/* 🏗️ SVG RENDERING ENGINE (Effects & Masks) */}
         <svg className="pointer-events-none absolute h-0 w-0" aria-hidden="true">
           <defs>
             <filter id="noiseFilter">
@@ -122,7 +130,6 @@ export default function RootLayout({
               <feGaussianBlur stdDeviation="12" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
-            {/* Custom mask for rounded squircle icons */}
             <clipPath id="squirclePath" clipPathUnits="objectBoundingBox">
               <path d="M .5,0 C .1,0 0,.1 0,.5 0,.9 .1,1 .5,1 .9,1 1,.9 1,.5 1,.1 .9,0 .5,0 Z" />
             </clipPath>

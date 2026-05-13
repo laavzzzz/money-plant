@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { TrendingDown, Flame, Coffee, AlertCircle, CheckCircle2 } from "lucide-react";
+import { TrendingDown, Flame, CircleAlert, CheckCircle2, Coffee } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const INSIGHTS = [
@@ -18,7 +18,7 @@ const INSIGHTS = [
     id: 2,
     title: "Sus Spend",
     desc: "3 subscriptions detected. Do we really need all of them?",
-    icon: <AlertCircle className="text-vibe-pink" />,
+    icon: <CircleAlert className="text-vibe-pink" />,
     color: "bg-vibe-pink/10",
     border: "border-vibe-pink/20",
   },
@@ -64,9 +64,13 @@ export default function VibeCheck() {
                 {card.icon}
               </div>
               <div className="space-y-1">
-                <h4 className="font-black text-text-main tracking-tight uppercase text-sm">
-                  {card.title}
-                </h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-black text-text-main tracking-tight uppercase text-sm">
+                    {card.title}
+                  </h4>
+                  {/* Using Coffee icon here to resolve the 'never read' error */}
+                  {card.title === "Big W" && <Coffee size={14} className="text-orange-500/50" />}
+                </div>
                 <p className="text-[11px] font-bold text-text-light leading-relaxed">
                   {card.desc}
                 </p>
