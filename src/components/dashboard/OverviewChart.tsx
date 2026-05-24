@@ -26,6 +26,8 @@ const COLORS = [
 
 /* 🧠 HELPER: GROUP BY CATEGORY */
 function groupByCategory(transactions: Transaction[]) {
+  if (!transactions.length) return [];
+  
   const map: Record<string, number> = {};
 
   transactions.forEach((tx) => {
@@ -50,7 +52,7 @@ export default function OverviewChart({
     return groupByCategory(transactions);
   }, [transactions]);
 
-  const total = data.reduce((sum, d) => sum + d.value, 0);
+  const total = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
 
   /* ❌ EMPTY STATE */
   if (data.length === 0) {
@@ -98,14 +100,13 @@ export default function OverviewChart({
       {/* 📋 LEGEND */}
       <div className="space-y-2 text-sm">
         {data.map((item, i) => {
-          const percent = (
-            (item.value / total) *
-            100
-          ).toFixed(0);
+          const percent = total > 0 
+            ? ((item.value / total) * 100).toFixed(0) 
+            : "0";
 
           return (
             <div
-              key={i}
+              key={item.name}
               className="flex justify-between items-center"
             >
               <div className="flex items-center gap-2">

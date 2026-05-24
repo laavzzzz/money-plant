@@ -1,26 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
+import {
   Settings,
-  ChevronRight, 
-  Award, 
-  Bell, 
-  ShieldCheck, 
-  Mail, 
+  ChevronRight,
+  Award,
+  Bell,
+  Mail,
   Smartphone,
-  ImageIcon,    // 💡 IMPORTING DIRECTLY AS ImageIcon FIXES THE ERROR
-  Moon, 
-  Sun, 
-  Github,      // 💡 Ensure 'b' is lowercase
-  Instagram, 
-  Zap, 
-  Heart, 
-  Target 
+  Image as ImageIcon,
+  Moon,
+  Sun,
+  Code,
+  Camera,
+  Zap,
+  Heart,
+  Target,
 } from "lucide-react";
-
-// If you are using Next.js Image, it would conflict with Lucide 'Image'
-import NextImage from "next/image";
 
 export default function ProfilePage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -115,8 +111,8 @@ export default function ProfilePage() {
             </div>
           </button>
 
-          <ProfileOption icon={<Github size={18}/>} label="Link GitHub" isConnected />
-          <ProfileOption icon={<Instagram size={18}/>} label="Link Instagram" />
+          <ProfileOption icon={<Code size={18}/>} label="Link GitHub" isConnected />
+          <ProfileOption icon={<Camera size={18}/>} label="Link Instagram" />
         </div>
       </div>
 

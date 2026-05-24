@@ -1,11 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Sparkles, TrendingUp, Zap, ArrowUpRight } from "lucide-react";
 
 export default function LandingPage() {
+  const vibePreviewRef = useRef<HTMLDivElement>(null);
+
+  const scrollToVibePreview = () => {
+    vibePreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-black overflow-hidden relative">
       {/* --- BACKGROUND ANIMATION ELEMENTS --- */}
@@ -42,7 +48,7 @@ export default function LandingPage() {
           <Link href="/login" className="px-6 py-2.5 font-bold text-sm hover:opacity-70 transition-opacity">
             Login
           </Link>
-          <Link href="/signup" className="px-6 py-2.5 bg-black text-white rounded-2xl font-bold text-sm shadow-xl hover:scale-105 transition-transform">
+          <Link href="/login" className="px-6 py-2.5 bg-black text-white rounded-2xl font-bold text-sm shadow-xl hover:scale-105 transition-transform">
             Join the Squad
           </Link>
         </div>
@@ -87,20 +93,31 @@ export default function LandingPage() {
           transition={{ delay: 0.6 }}
           className="flex flex-col sm:flex-row gap-4 w-full max-w-md"
         >
-          <Link href="/signup" className="flex-1 group bg-primary text-white font-black py-5 rounded-[30px] shadow-[0_20px_50px_rgba(234,179,8,0.3)] hover:scale-105 transition-all flex items-center justify-center gap-2">
+          <Link href="/login" className="flex-1 group bg-primary text-white font-black py-5 rounded-[30px] shadow-[0_20px_50px_rgba(234,179,8,0.3)] hover:scale-105 transition-all flex items-center justify-center gap-2">
             CLAIM YOUR SEED <ArrowUpRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </Link>
-          <button className="flex-1 bg-white border border-gray-100 text-black font-black py-5 rounded-[30px] shadow-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-2"> WATCH VIBE
+          <button
+            type="button"
+            onClick={scrollToVibePreview}
+            className="flex-1 bg-white border border-gray-100 text-black font-black py-5 rounded-[30px] shadow-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+          >
+            WATCH VIBE
           </button>
         </motion.div>
 
         {/* --- FEATURE BENTO PREVIEW --- */}
-        <motion.div 
+        <motion.div
+          ref={vibePreviewRef}
+          id="vibe-preview"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-6 w-full"
+          className="mt-24 w-full scroll-mt-8"
         >
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-8">
+            See the vibe
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
           <FeatureCard 
             icon={<Zap size={24} />} 
             title="Aura System" 
@@ -119,6 +136,7 @@ export default function LandingPage() {
             desc="Unlock exclusive badges and themes for your character sheet." 
             color="bg-purple-400"
           />
+          </div>
         </motion.div>
       </main>
 

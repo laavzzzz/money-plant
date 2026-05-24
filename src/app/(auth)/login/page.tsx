@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, AtSign, PhoneCall, ChevronRight, CheckCircle } from "lucide-react";
+import { ArrowLeft, AtSign, Phone, ChevronRight, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -97,7 +97,7 @@ export default function LoginPage() {
                   <div className="flex gap-2">
                     <div className="bg-gray-100 px-5 flex items-center rounded-3xl font-black text-xs italic">+91</div>
                     <div className="relative flex-1">
-                      <PhoneCall className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                      <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                       <input 
                         type="tel" 
                         placeholder="00000 00000"
@@ -119,12 +119,12 @@ export default function LoginPage() {
           </div>
 
           {/* Primary Action Button */}
-          <Link href="/dashboard" className="w-full">
-            <button className="w-full bg-black text-white mt-10 py-5 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl hover:shadow-yellow-400/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group">
+          <div className="w-full">
+            <Link href="/dashboard" className="w-full bg-black text-white mt-10 py-5 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl hover:shadow-yellow-400/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group">
               {mode === "login" ? "Enter Dashboard" : "Claim Your Garden"}
               <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </Link>
+            </Link>
+          </div>
         </div>
 
         {/* Auth Toggle */}

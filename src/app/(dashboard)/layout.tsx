@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 import BottomNav from "@/components/layout/BottomNav";
 import { cn } from "@/lib/utils";
-import { Bell } from "lucide-react";
-import { Leaf } from "lucide-react";
+import { Bell, Leaf, Search } from "lucide-react";
 /* -------------------------------------------------------------------------- */
 /* DASHBOARD HEADER                             */
 /* -------------------------------------------------------------------------- */
@@ -30,7 +29,7 @@ const DashboardHeader = () => {
            <input type="text" placeholder="Search wealth..." className="bg-transparent border-none text-sm outline-none w-40 placeholder:text-text-light/50" />
         </div>
 
-        <button className="p-2.5 rounded-full bg-white/50 dark:bg-white/5 border border-white/80 dark:border-white/10 text-text-main hover:scale-110 active:scale-95 transition-all shadow-sm">
+        <button className="relative p-2.5 rounded-full bg-white/50 dark:bg-white/5 border border-white/80 dark:border-white/10 text-text-main hover:scale-110 active:scale-95 transition-all shadow-sm">
           <Bell size={20} />
           <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white dark:border-black animate-pulse" />
         </button>

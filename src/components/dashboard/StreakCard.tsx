@@ -27,7 +27,7 @@ function getFireSize(streak: number) {
 
 /* 🎨 COMPONENT */
 export default function StreakCard({ streak = 0 }: Props) {
-  const safeStreak = Math.max(0, streak); // ✅ safety
+  const safeStreak = Math.max(0, streak);
   const message = getMessage(safeStreak);
   const fireSize = getFireSize(safeStreak);
 
@@ -39,7 +39,7 @@ export default function StreakCard({ streak = 0 }: Props) {
       <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-24 h-24 bg-orange-200 rounded-full blur-3xl opacity-30" />
 
       <motion.div
-        whileHover={{ scale: 1.04 }}
+        whileHover={{ x: 5 }}
         className="relative z-10 flex justify-between items-center"
       >
         {/* 📊 TEXT */}
@@ -61,6 +61,7 @@ export default function StreakCard({ streak = 0 }: Props) {
 
           {/* 💬 MESSAGE */}
           <motion.p
+            key={message}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}

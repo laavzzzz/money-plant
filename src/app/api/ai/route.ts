@@ -1,73 +1,94 @@
-import { OpenAIStream, StreamingTextResponse } from 'ai';
-import OpenAI from 'openai';
+import { streamText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { formatSnapshotForPrompt, type FinanceSnapshot } from "@/lib/vibe-check";
 
-/* -------------------------------------------------------------------------- */
-/* VIBECHECK AI ENGINE: THE BRAIN OF THE GARDEN                               */
-/* -------------------------------------------------------------------------- */
+export const runtime = "edge";
+export const maxDuration = 30;
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Use Edge runtime for the fastest possible AI responses
-export const runtime = 'edge';
+type ChatMessage = { role: string; content: string };
 
 export async function POST(req: Request) {
   try {
-    // 1. Extract chat messages and the current financial "vibe" from the request
-    const { messages, totalSpent, limit, savings, plantStage } = await req.json();
+    if (!process.env.OPENAI_API_KEY) {
+      return Response.json(
+        {
+          error: "missing_api_key",
+          message:
+            "Add OPENAI_API_KEY to .env.local to enable VibeCheck AI. Get a key at platform.openai.com",
+        },
+        { status: 503 }
+      );
+    }
 
-    // 2. Build the System Prompt (This is the AI's personality and knowledge)
-    const systemPrompt = `
-      You are "VibeCheck", the high-end, witty AI financial sensei for the MoneyPlant app.
-      
-      PERSONALITY:
-      - You speak in Gen-Z slang (no cap, bread, stacks, W/L, vibe check, manifesting).
-      - You are supportive but brutally honest about financial choices.
-      - Your goal is to help the user grow their "MoneyPlant" to reach goals like a PS5 or Zara jacket.
+    const body = await req.json();
+    const { messages, context } = body as {
+      messages?: ChatMessage[];
+      context?: FinanceSnapshot;
+    };
 
-      CURRENT GARDEN CONTEXT:
-      - User's Total Spent: $${totalSpent}
-      - Monthly Budget Limit: $${limit}
-      - Current Savings: $${savings}
-      - Plant Growth Stage: ${plantStage?.name || 'Seedling'}
-      - Remaining Safe-to-Spend: $${limit - totalSpent}
+    const contextBlock = context
+      ? formatSnapshotForPrompt(context)
+      : "No live financial data — user may be on a public page.";
 
-      RULES:
-      - If the user is over budget, be a bit "wilted" (sad) and tell them to chill on spending.
-      - If they have a "Safe-to-Spend" surplus, encourage them to manifest their goals.
-      - Keep responses punchy and under 3 sentences unless explaining something complex.
-      - Always include 1-2 relevant emojis (🌿, 💸, 🥀, 🚀).
-    `;
+    const systemPrompt = `You are "VibeCheck", the AI financial companion inside the MoneyPlant app.
 
-    // 3. Request a streaming completion from OpenAI
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o', // The most advanced model for complex reasoning
-      stream: true,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages,
-      ],
-      temperature: 0.8, // Makes the AI more creative and "vibey"
+PERSONALITY:
+- Gen-Z friendly (bread, stacks, W/L, vibe check) but clear and helpful.
+- Supportive and honest about spending. Use ₹ for money.
+- Keep answers concise (2–4 sentences) unless the user asks for detail.
+
+YOUR JOB:
+1. Answer questions about THIS user's profile, income, expenses, savings, categories, streak, and plant stage using ONLY the live data below.
+2. Help them navigate the app — when relevant, name the page and path (e.g. "Head to History at /transactions to log spending").
+3. Give actionable money advice based on their numbers (safe to spend, overspending categories, streak motivation).
+4. If they have no transactions, encourage adding their first log at /transactions.
+
+RULES:
+- Never invent transactions or amounts not in the data.
+- If asked something outside finance or this app, briefly redirect to money/profile/nav help.
+- For navigation, prefer exact paths from APP NAVIGATION.
+- Include 1–2 emojis when it fits (🌿 💸 🚀 🥀).
+
+LIVE USER DATA:
+${contextBlock}`;
+
+    const chatMessages = (messages ?? [])
+      .filter(
+        (m) =>
+          (m.role === "user" || m.role === "assistant") &&
+          typeof m.content === "string" &&
+          m.content.trim().length > 0
+      )
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content.trim(),
+      }));
+
+    if (chatMessages.length === 0) {
+      return Response.json(
+        { error: "no_messages", message: "Send a message to start the chat." },
+        { status: 400 }
+      );
+    }
+
+    const result = streamText({
+      model: openai("gpt-4o-mini"),
+      system: systemPrompt,
+      messages: chatMessages,
+      temperature: 0.7,
+      maxOutputTokens: 600,
     });
 
-    // 4. Convert to a friendly stream so the UI can type it out word-by-word
-    const stream = OpenAIStream(response);
-    
-    // 5. Return the streaming response to the frontend
-    return new StreamingTextResponse(stream);
-
-  } catch (error: any) {
+    return result.toTextStreamResponse();
+  } catch (error) {
     console.error("VIBECHECK_API_ERROR:", error);
-    
-    // Fallback if the AI fails or API key is missing
-    return new Response(
-      JSON.stringify({ 
-        error: "My neural roots got tangled! Check your OpenAI API key in .env.local",
-        message: "I'm having a mid-life crisis. Try again in a sec? 🥀" 
-      }), 
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    return Response.json(
+      {
+        error: "ai_failed",
+        message:
+          "VibeCheck hit a snag. Check your API key and try again in a moment. 🥀",
+      },
+      { status: 500 }
     );
   }
 }

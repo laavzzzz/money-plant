@@ -18,29 +18,29 @@ type PlantProps = {
 };
 
 /* 🌿 EMOJI + STYLE SYSTEM */
-function getPlantConfig(level: number) {
-  if (level <= 1)
+function getPlantConfig(growth: number) {
+  if (growth <= 20)
     return {
       emoji: "🌱",
       glow: "from-green-100/40 to-lime-100/30",
       aura: "bg-green-200",
     };
 
-  if (level === 2)
+  if (growth <= 45)
     return {
       emoji: "🌿",
-      glow: "from-green-200/40 to-emerald-100/30",
-      aura: "bg-emerald-200",
+      glow: "from-emerald-200/40 to-green-100/30",
+      aura: "bg-emerald-400",
     };
 
-  if (level === 3)
+  if (growth <= 70)
     return {
       emoji: "🪴",
       glow: "from-green-300/40 to-teal-100/30",
-      aura: "bg-teal-200",
+      aura: "bg-teal-300",
     };
 
-  if (level === 4)
+  if (growth <= 90)
     return {
       emoji: "🌳",
       glow: "from-green-400/40 to-yellow-100/30",
@@ -60,10 +60,9 @@ export default function PlantSection({
   stage,
   status,
 }: PlantProps) {
-  const safeLevel = stage?.level ?? 1;
   const safeGrowth = Math.max(0, Math.min(growth, 100));
 
-  const plant = getPlantConfig(safeLevel);
+  const plant = getPlantConfig(safeGrowth);
 
   return (
     <GlassCard
@@ -91,7 +90,7 @@ export default function PlantSection({
           transition={{
             repeat: Infinity,
             duration: 3,
-            ease: [0.42, 0, 0.58, 1], // ✅ fixed easing
+            ease: "easeInOut",
           }}
           className="text-6xl"
         >
@@ -99,14 +98,16 @@ export default function PlantSection({
         </motion.div>
 
         {/* 💬 STATUS */}
-        <motion.p
-          key={status}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-sm text-gray-500 mt-2"
-        >
-          {status}
-        </motion.p>
+        <div className="h-6 flex items-center justify-center mt-2">
+          <motion.p
+            key={status}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-sm text-gray-500 font-medium"
+          >
+            {status}
+          </motion.p>
+        </div>
 
         {/* 📊 PROGRESS */}
         <div className="mt-4">
@@ -125,10 +126,15 @@ export default function PlantSection({
         </motion.p>
 
         {/* 🌱 STAGE INFO */}
-        <div className="mt-2 flex justify-center">
-          <span className="text-xs px-3 py-1 rounded-full bg-white/40 backdrop-blur text-gray-600">
-            {stage?.name ?? "Seed Stage"}
-          </span>
+        <div className="mt-2 flex justify-center h-6">
+          <motion.span 
+            key={stage?.name}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-white/40 backdrop-blur text-gray-600 border border-white/20"
+          >
+            {stage?.name || `Level ${stage?.level || 1}`}
+          </motion.span>
         </div>
       </div>
     </GlassCard>

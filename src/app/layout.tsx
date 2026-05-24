@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "../components/theme-provider";
 import PageTransition from "../components/page-transition";
-import VibeCheck from "../components/ai/VibeCheck"; // 🤖 The AI Companion
+import AppProviders from "../components/providers/AppProviders";
 import { cn } from "@/lib/utils";
 import "@/app/globals.css";
 
@@ -87,23 +87,14 @@ export default function RootLayout({
           <div className="vibe-canvas fixed inset-0 z-0" aria-hidden="true" />
 
           {/* 🚀 MAIN APP STRUCTURE */}
-          <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden">
-            
-            {/* 🎬 PAGE CONTENT */}
-            <PageTransition>
-              <main className="flex-1 relative z-10 w-full">
-                {children}
-              </main>
-            </PageTransition>
-
-            {/* 🤖 GLOBAL AI COMPANION (VibeCheck)
-                Placed outside main to stay persistent across page swaps 
-            */}
-            <VibeCheck />
-
-            {/* 📱 SAFE AREA SPACING */}
-            <div className="h-[env(safe-area-inset-bottom)]" />
-          </div>
+          <AppProviders>
+            <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden">
+              <PageTransition>
+                <main className="flex-1 relative z-10 w-full">{children}</main>
+              </PageTransition>
+              <div className="h-[env(safe-area-inset-bottom)]" />
+            </div>
+          </AppProviders>
 
           {/* 🔔 PREMIUM TOAST NOTIFICATIONS */}
           <Toaster 
