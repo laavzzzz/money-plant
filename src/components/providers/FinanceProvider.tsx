@@ -6,17 +6,31 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { usePlant } from "@/hooks/usePlant";
 import { useStreak } from "@/hooks/useStreak";
 import { buildFinanceSnapshot, type FinanceSnapshot } from "@/lib/vibe-check";
+import type { Transaction } from "@/hooks/useTransactions";
 
 type FinanceContextValue = FinanceSnapshot & {
   loading: boolean;
+  error: string | null;
+  transactions: Transaction[];
+  adding: boolean;
   refreshTransactions: () => void;
+  addTransaction: ReturnType<typeof useTransactions>["addTransaction"];
+  deleteTransaction: ReturnType<typeof useTransactions>["deleteTransaction"];
 };
 
 const FinanceContext = createContext<FinanceContextValue | null>(null);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { transactions, loading, refresh } = useTransactions();
+  const {
+    transactions,
+    loading,
+    error,
+    adding,
+    addTransaction,
+    deleteTransaction,
+    refresh,
+  } = useTransactions();
   const { streak } = useStreak();
   const { income, expense, savings, plantStage, status } = usePlant(transactions);
 
@@ -39,9 +53,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...snapshot,
       loading,
+      error,
+      transactions,
+      adding,
       refreshTransactions: refresh,
+      addTransaction,
+      deleteTransaction,
     }),
-    [snapshot, loading, refresh]
+    [snapshot, loading, error, transactions, adding, refresh, addTransaction, deleteTransaction]
   );
 
   return (
@@ -55,4 +74,18 @@ export function useFinanceContext() {
     throw new Error("useFinanceContext must be used within FinanceProvider");
   }
   return ctx;
+}
+
+/** Shared transaction state (same instance as finance context) */
+export function useSharedTransactions() {
+  const ctx = useFinanceContext();
+  return {
+    transactions: ctx.transactions,
+    loading: ctx.loading,
+    error: ctx.error,
+    adding: ctx.adding,
+    addTransaction: ctx.addTransaction,
+    deleteTransaction: ctx.deleteTransaction,
+    refresh: ctx.refreshTransactions,
+  };
 }

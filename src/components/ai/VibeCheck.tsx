@@ -38,6 +38,7 @@ const QUICK_PROMPTS: Array<{
   { label: "My profile", query: "Summarize my profile stats, aura, rank, and plant stage." },
   { label: "Add expense", href: "/transactions" },
   { label: "Garden", href: "/garden" },
+  { label: "Wishlist", href: "/wishlist" },
 ];
 
 export default function VibeCheck() {
@@ -90,6 +91,12 @@ export default function VibeCheck() {
 
   useEffect(() => {
     return () => abortControllerRef.current?.abort();
+  }, []);
+
+  useEffect(() => {
+    const onOpen = () => setIsOpen(true);
+    window.addEventListener("vibecheck:open", onOpen);
+    return () => window.removeEventListener("vibecheck:open", onOpen);
   }, []);
 
   const sendToAI = async (text: string) => {

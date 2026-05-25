@@ -1,124 +1,136 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 import BottomNav from "@/components/layout/BottomNav";
-import { cn } from "@/lib/utils";
 import { Bell, Leaf, Search } from "lucide-react";
-/* -------------------------------------------------------------------------- */
-/* DASHBOARD HEADER                             */
-/* -------------------------------------------------------------------------- */
-const DashboardHeader = () => {
+import { toast } from "sonner";
+import { getPageMeta } from "@/lib/page-meta";
+
+const SHELL = "w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8";
+
+function DashboardHeader() {
   return (
-    <header className="sticky top-0 z-50 w-full px-6 md:px-10 py-4 flex items-center justify-between bg-white/40 dark:bg-black/20 backdrop-blur-xl border-b border-white/20">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 bg-accent rounded-2xl flex items-center justify-center shadow-vibe transform transition-transform hover:rotate-12">
-          <Leaf className="text-vibe-dark w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="text-[10px] font-black text-text-light uppercase tracking-[0.2em] leading-none mb-1">My Garden</h1>
-          <p className="text-xl font-black text-text-main tracking-tight">MoneyPlant🌿</p>
-        </div>
-      </div>
+    <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/50 dark:bg-black/30 backdrop-blur-xl">
+      <div
+        className={`${SHELL} py-3 sm:py-4 flex items-center justify-between gap-3`}
+      >
+        <Link href="/dashboard" className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 bg-accent rounded-2xl flex items-center justify-center shadow-vibe shrink-0">
+            <Leaf className="text-vibe-dark w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[9px] sm:text-[10px] font-black text-text-light uppercase tracking-[0.2em] leading-none mb-0.5 truncate">
+              My Garden
+            </p>
+            <p className="text-base sm:text-xl font-black text-text-main tracking-tight truncate">
+              MoneyPlant 🌿
+            </p>
+          </div>
+        </Link>
 
-      <div className="flex items-center gap-4">
-        {/* Search Bar - Hidden on small mobile, visible on tablet+ */}
-        <div className="hidden md:flex items-center bg-white/30 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-full px-4 py-2 gap-2 focus-within:ring-2 ring-primary/20 transition-all">
-           <Search size={16} className="text-text-light" />
-           <input type="text" placeholder="Search wealth..." className="bg-transparent border-none text-sm outline-none w-40 placeholder:text-text-light/50" />
-        </div>
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="hidden sm:flex items-center bg-white/40 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-full px-3 py-1.5 gap-2 focus-within:ring-2 ring-primary/20">
+            <Search size={16} className="text-text-light shrink-0" />
+            <input
+              type="search"
+              placeholder="Search wealth..."
+              className="bg-transparent border-none text-sm outline-none w-28 lg:w-40 placeholder:text-text-light/50"
+            />
+          </div>
 
-        <button className="relative p-2.5 rounded-full bg-white/50 dark:bg-white/5 border border-white/80 dark:border-white/10 text-text-main hover:scale-110 active:scale-95 transition-all shadow-sm">
-          <Bell size={20} />
-          <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-white dark:border-black animate-pulse" />
-        </button>
+          <button
+            type="button"
+            onClick={() => toast.info("No new alerts — you're all caught up! 🔔")}
+            className="relative p-2 sm:p-2.5 rounded-full bg-white/60 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:scale-105 active:scale-95 transition-transform"
+            aria-label="Notifications"
+          >
+            <Bell size={18} className="sm:w-5 sm:h-5" />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border border-white dark:border-black" />
+          </button>
 
-        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px] cursor-pointer hover:scale-105 transition-transform">
-           <div className="w-full h-full rounded-full bg-bg-main flex items-center justify-center overflow-hidden">
-              <img src="/avatar-placeholder.png" alt="Profile" className="w-full h-full object-cover" />
-           </div>
+          <Link
+            href="/profile"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px] hover:scale-105 transition-transform"
+            aria-label="Profile"
+          >
+            <div className="w-full h-full rounded-full bg-bg-main flex items-center justify-center text-base">
+              👩‍💻
+            </div>
+          </Link>
         </div>
       </div>
     </header>
   );
-};
+}
 
-/* -------------------------------------------------------------------------- */
-/* MAIN LAYOUT                                  */
-/* -------------------------------------------------------------------------- */
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const meta = getPageMeta(pathname);
+  const today = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-transparent selection:bg-primary/30">
-      {/* 1. Persistent Header */}
+    <div className="relative min-h-[100dvh] flex flex-col bg-bg-main">
       <DashboardHeader />
 
-      {/* 2. Content Area - UPGRADED ALIGNMENT 
-          - Changed max-w-2xl to max-w-[1800px] to allow wide spread.
-          - Added responsive padding for cleaner desktop look.
-      */}
-      <main className="flex-1 w-full max-w-[1800px] mx-auto px-6 md:px-12 lg:px-16 pt-8 pb-32">
+      <main className={`${SHELL} flex-1 pt-5 sm:pt-8 pb-28 sm:pb-32`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 15, scale: 0.99 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -15, scale: 0.99 }}
-            transition={{
-              type: "spring",
-              stiffness: 260,
-              damping: 20,
-            }}
-            className="w-full h-full"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="w-full min-w-0"
           >
-            {/* Page Context Header */}
-            <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div>
-                <span className="inline-flex items-center gap-2 text-[10px] font-black text-primary bg-primary/10 px-3 py-1.5 rounded-full uppercase tracking-widest mb-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-                  Live Status
+            <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
+              <div className="min-w-0">
+                <span className="inline-flex items-center gap-2 text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mb-2 sm:mb-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  Live
                 </span>
-                <h2 className="text-4xl md:text-5xl font-black text-text-main tracking-tighter capitalize">
-                  {pathname.split("/").pop() || "Dashboard"}
-                </h2>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-text-main tracking-tighter">
+                  {meta.title}
+                </h1>
+                {meta.subtitle && (
+                  <p className="text-xs sm:text-sm font-bold text-text-light mt-1">
+                    {meta.subtitle}
+                  </p>
+                )}
               </div>
-              
-              {/* Optional: Add a "Quick Stats" or "Date" widget on the right for wide desktop fill */}
-              <div className="hidden lg:block text-right">
-                <p className="text-text-light font-bold text-sm uppercase tracking-widest">Tuesday</p>
-                <p className="text-text-main font-black text-xl">May 12, 2026</p>
-              </div>
+              <p className="text-[10px] sm:text-xs font-bold text-text-light uppercase tracking-widest shrink-0 hidden xs:block sm:text-right">
+                {today}
+              </p>
             </div>
 
-            {/* The Actual Page Content (e.g., your Bento Grid) */}
-            <div className="w-full">
-               {children}
-            </div>
+            <div className="w-full min-w-0">{children}</div>
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* 3. Floating Bottom Navigation */}
       <BottomNav />
 
-      {/* 4. Decorative Background Engine */}
-      <div 
-        className="fixed inset-0 -z-50 pointer-events-none overflow-hidden" 
+      <div
+        className="fixed inset-0 -z-50 pointer-events-none overflow-hidden"
         aria-hidden="true"
       >
         <div className="vibe-canvas absolute inset-0 opacity-40 dark:opacity-20" />
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/15 blur-[140px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-accent/15 blur-[140px] animation-delay-2000 animate-pulse" />
+        <div className="absolute top-[-15%] left-[-10%] w-[50%] max-w-xl h-[50%] rounded-full bg-primary/15 blur-[120px]" />
+        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] max-w-xl h-[50%] rounded-full bg-accent/15 blur-[120px]" />
       </div>
 
-      {/* 5. Desktop-Safe Blur (Bottom Navigation Clearance) */}
-      <div className="fixed bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-bg-main via-bg-main/80 to-transparent pointer-events-none z-30" />
+      <div className="fixed bottom-0 left-0 right-0 h-24 sm:h-28 bg-gradient-to-t from-bg-main via-bg-main/90 to-transparent pointer-events-none z-30" />
     </div>
   );
 }

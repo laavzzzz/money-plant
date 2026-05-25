@@ -1,41 +1,34 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/mongodb";
-import { Transaction } from "@/models/Transaction";
+import {
+  createTransaction,
+  fetchAllTransactions,
+} from "@/lib/data/transactions";
 
-/* 📥 GET — Fetch all transactions */
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
-    await dbConnect();
-
-    const transactions = await Transaction.find()
-      .sort({ createdAt: -1 })
-      .lean();
-
+    const { transactions, source } = await fetchAllTransactions();
     return NextResponse.json(
-      { success: true, transactions },
+      { success: true, transactions, source },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("GET Transactions Error:", error);
-
     return NextResponse.json(
-      { success: false, message: "Failed to fetch transactions" },
+      { success: false, message: `Fetch failed: ${message}` },
       { status: 500 }
     );
   }
 }
 
-/* 📤 POST — Add new transaction */
 export async function POST(req: Request) {
   try {
-    await dbConnect();
-
     const body = await req.json();
+    const { title, amount, type, category, date } = body;
 
-    const { title, amount, type, category } = body;
-
-    /* 🔐 Validation */
-    if (!title || !amount || !type || !category) {
+    if (title === undefined || amount === undefined || !type || !category) {
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
         { status: 400 }
@@ -49,24 +42,23 @@ export async function POST(req: Request) {
       );
     }
 
-    /* 💾 Create transaction */
-    const newTransaction = await Transaction.create({
+    const { transaction, source } = await createTransaction({
       title,
-      amount,
+      amount: Number(amount),
       type,
       category,
-      date: new Date(),
+      date,
     });
 
     return NextResponse.json(
-      { success: true, transaction: newTransaction },
+      { success: true, transaction, source },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("POST Transaction Error:", error);
-
     return NextResponse.json(
-      { success: false, message: "Failed to add transaction" },
+      { success: false, message: `Add failed: ${message}` },
       { status: 500 }
     );
   }

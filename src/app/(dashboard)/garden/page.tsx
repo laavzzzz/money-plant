@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Droplets, Trophy, Target, Sparkles, ChevronRight, Leaf } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
@@ -8,21 +10,28 @@ import  Button  from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 export default function GardenPage() {
+  const router = useRouter();
   const [isWatering, setIsWatering] = useState(false);
-  const progress = 65; // Percentage toward next level
+  const progress = 65;
 
-  const handleWaterPlant = () => {
+  const handleWaterPlant = async () => {
     setIsWatering(true);
-    setTimeout(() => setIsWatering(false), 2000);
+    try {
+      await fetch("/api/streak", { method: "POST" });
+      toast.success("Plant watered! Streak updated 🌿");
+    } catch {
+      toast.error("Could not water plant — try again");
+    } finally {
+      window.setTimeout(() => setIsWatering(false), 1500);
+    }
   };
 
   return (
-    <main className="space-y-8 pb-32">
-      {/* 🏆 HEADER STATUS */}
-      <section className="flex justify-between items-end">
+    <div className="w-full min-w-0 space-y-6 sm:space-y-8">
+      <section className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
           <p className="text-xs font-black text-primary uppercase tracking-widest">Level 14</p>
-          <h1 className="text-3xl font-black text-text-main tracking-tighter">Money Tree 🌳</h1>
+          <p className="text-sm font-bold text-text-light">Your growing money tree</p>
         </div>
         <div className="text-right">
           <p className="text-[10px] font-bold text-text-light uppercase">Total Saved</p>
@@ -99,10 +108,11 @@ export default function GardenPage() {
           >
             Water Plant
           </Button>
-          <Button 
-            variant="primary" 
-            fullWidth 
+          <Button
+            variant="primary"
+            fullWidth
             leftIcon={<Target size={18} />}
+            onClick={() => router.push("/goals")}
           >
             Set Goal
           </Button>
@@ -140,6 +150,6 @@ export default function GardenPage() {
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useTransactionModal } from "@/components/providers/TransactionModalProvider";
 import { 
   Flame, 
   Coffee, 
@@ -57,6 +59,9 @@ const INSIGHTS: Insight[] = [
 ];
 
 export default function VibeCheck() {
+  const router = useRouter();
+  const { openVibeCheck } = useTransactionModal();
+
   return (
     <section className="space-y-4">
       {/* Header Section */}
@@ -64,7 +69,11 @@ export default function VibeCheck() {
         <h2 className="text-xs font-black text-text-light uppercase tracking-[0.2em]">
           Vibe Check ⚡️
         </h2>
-        <button className="text-[10px] font-black text-vibe-purple uppercase border-b-2 border-vibe-purple/30 pb-0.5 hover:opacity-80 transition-opacity">
+        <button
+          type="button"
+          onClick={() => openVibeCheck()}
+          className="text-[10px] font-black text-vibe-purple uppercase border-b-2 border-vibe-purple/30 pb-0.5 hover:opacity-80 transition-opacity"
+        >
           View All
         </button>
       </div>
@@ -138,7 +147,15 @@ export default function VibeCheck() {
                   className={cn("h-full rounded-full", card.accent)}
                 />
               </div>
-              <button className="text-[9px] font-black text-text-light/50 tracking-wider uppercase hover:text-text-main transition-colors">
+              <button
+                type="button"
+                onClick={() =>
+                  card.id === 2
+                    ? router.push("/transactions")
+                    : openVibeCheck()
+                }
+                className="text-[9px] font-black text-text-light/50 tracking-wider uppercase hover:text-text-main transition-colors"
+              >
                 Details
               </button>
             </div>

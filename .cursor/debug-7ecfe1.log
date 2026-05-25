@@ -1,0 +1,123 @@
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670677691}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670680369}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670681780}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670686785}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670686788}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670686805}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670687508}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670687520}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670687543}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670689972}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670689965}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670689984}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670690831}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670690967}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670693493}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670693510}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670693659}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670693705}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670702431}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670702437}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670702544}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670706859}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670706874}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670706975}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670708403}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670708404}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670708421}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670709290}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670709294}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670709433}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670709953}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670710078}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670710087}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670712710}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670712725}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670712707}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670713023}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670713044}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670713087}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670722418}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670722423}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670722462}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670727211}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670727220}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670727223}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670727231}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670727346}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670727329}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670728855}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670728857}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670728953}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670732675}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670732694}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670732756}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670746856}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670746882}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670746885}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670746889}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670748222}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670748233}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670763839}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670763841}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670763856}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670773297}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670773301}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670773319}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670784033}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670784039}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670784053}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670794704}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670794705}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670794719}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670803754}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670803756}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670803771}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670811287}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670811289}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670811316}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779670969097}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779670969115}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779670969148}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671249915}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671249939}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671249992}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671249995}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671265925}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671265962}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671265980}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671265991}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671266241}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671266246}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671266361}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671266363}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671283365}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671283369}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671283378}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671283382}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"D","location":"useTransactions.ts:fetchTransactions","message":"client fetch ok","data":{"count":4},"timestamp":1779671283622}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671319758}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671319790}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"D","location":"useTransactions.ts:fetchTransactions","message":"client fetch ok","data":{"count":4},"timestamp":1779671320098}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671320030}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671320062}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671335466}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671335484}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671335637}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671335641}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"D","location":"useTransactions.ts:fetchTransactions","message":"client fetch ok","data":{"count":4},"timestamp":1779671335654}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671366399}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671366402}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"D","location":"useTransactions.ts:fetchTransactions","message":"client fetch ok","data":{"count":4},"timestamp":1779671366435}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671366417}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671366422}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671374864}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671374868}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"D","location":"useTransactions.ts:fetchTransactions","message":"client fetch ok","data":{"count":4},"timestamp":1779671374895}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671374877}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671374884}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"fetch start","data":{},"timestamp":1779671560637}
+{"sessionId":"7ecfe1","hypothesisId":"A","location":"transactions.ts:fetchAllTransactions","message":"mongo probe result","data":{"mongoOk":false},"timestamp":1779671560645}
+{"sessionId":"7ecfe1","hypothesisId":"B","location":"transactions.ts:fetchAllTransactions","message":"local fallback used","data":{"count":4},"timestamp":1779671560661}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"C","location":"api/transactions/route.ts:GET","message":"transactions ok","data":{"source":"local","count":4},"timestamp":1779671560662}
+{"sessionId":"7ecfe1","runId":"post-fix","hypothesisId":"D","location":"useTransactions.ts:fetchTransactions","message":"client fetch ok","data":{"count":4},"timestamp":1779671560676}

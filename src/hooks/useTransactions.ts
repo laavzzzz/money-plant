@@ -43,11 +43,20 @@ export function useTransactions() {
         signal: controller.signal,
       });
 
-      if (!res.ok) throw new Error("Failed to fetch transactions");
+      let data: ApiResponse;
+      const contentType = res.headers.get("content-type");
 
-      const data: ApiResponse = await res.json();
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        // If server crashed and returned HTML, capture status
+        const text = await res.text();
+        throw new Error(`Server error ${res.status}: ${text.slice(0, 50)}...`);
+      }
 
-      if (!data.success) throw new Error(data.message || "API error");
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || `Server error: ${res.status}`);
+      }
 
       setTransactions(data.transactions ?? []);
     } catch (err: any) {
@@ -78,6 +87,7 @@ export function useTransactions() {
     const tempTx: Transaction = {
       ...tx,
       _id: tempId,
+      date: tx.date || new Date().toISOString(),
     };
 
     try {
@@ -92,15 +102,21 @@ export function useTransactions() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(tx),
+        body: JSON.stringify({ ...tx, date: tempTx.date }),
       });
 
-      if (!res.ok) throw new Error("Failed to add transaction");
+      let data: ApiResponse;
+      const contentType = res.headers.get("content-type");
 
-      const data: ApiResponse = await res.json();
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        throw new Error(`Server error ${res.status}: Could not process request.`);
+      }
 
-      if (!data.success || !data.transaction)
+      if (!res.ok || !data.success || !data.transaction) {
         throw new Error(data.message || "Invalid response");
+      }
 
       /* 🔄 replace temp with real */
       setTransactions((prev) =>
@@ -140,7 +156,18 @@ export function useTransactions() {
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Delete failed");
+      let data: ApiResponse;
+      const contentType = res.headers.get("content-type");
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        throw new Error(`Server error ${res.status}: Could not delete.`);
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Delete failed");
+      }
 
       /* optional: update streak if needed */
     } catch (err) {

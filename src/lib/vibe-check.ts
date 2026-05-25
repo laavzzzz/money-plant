@@ -14,6 +14,7 @@ export const APP_ROUTES = [
   { path: "/dashboard", label: "Home", description: "Overview, plant, savings, charts, quick actions" },
   { path: "/transactions", label: "History", description: "View and add income/expense transactions" },
   { path: "/garden", label: "Garden", description: "Plant growth, water plant, achievements" },
+  { path: "/wishlist", label: "Wishlist", description: "Monthly wishlist items, savings targets, Gen-Z goals" },
   { path: "/leaderboard", label: "Ranks", description: "Leaderboard and aura rankings" },
   { path: "/profile", label: "Profile", description: "Character sheet, settings, linked accounts" },
   { path: "/analytics", label: "Analytics", description: "Spending breakdown and trends" },

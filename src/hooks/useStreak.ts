@@ -2,30 +2,47 @@
 
 import { useEffect, useState } from "react";
 
-type Streak = {
+type StreakState = {
   count: number;
-  lastActiveDate: string;
+  lastActiveDate: string | null;
 };
 
 export function useStreak() {
-  const [streak, setStreak] = useState<Streak | null>(null);
+  const [streak, setStreak] = useState<StreakState>({ count: 0, lastActiveDate: null });
   const [loading, setLoading] = useState(true);
 
-  /* 🔄 FETCH */
   const fetchStreak = async () => {
-    const res = await fetch("/api/streak");
-    const data = await res.json();
-    setStreak(data.streak);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/streak");
+      const data = await res.json();
+      if (data.success && data.streak) {
+        setStreak({
+          count: data.streak.count ?? 0,
+          lastActiveDate: data.streak.lastActiveDate ?? null,
+        });
+      } else {
+        setStreak({ count: 0, lastActiveDate: null });
+      }
+    } catch {
+      setStreak({ count: 0, lastActiveDate: null });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  /* 🔥 UPDATE (call on user action) */
   const updateStreak = async () => {
-    const res = await fetch("/api/streak", {
-      method: "POST",
-    });
-    const data = await res.json();
-    setStreak(data.streak);
+    try {
+      const res = await fetch("/api/streak", { method: "POST" });
+      const data = await res.json();
+      if (data.success && data.streak) {
+        setStreak({
+          count: data.streak.count ?? 0,
+          lastActiveDate: data.streak.lastActiveDate ?? null,
+        });
+      }
+    } catch {
+      /* non-blocking */
+    }
   };
 
   useEffect(() => {
@@ -33,7 +50,7 @@ export function useStreak() {
   }, []);
 
   return {
-    streak: streak?.count ?? 0,
+    streak: streak.count,
     loading,
     updateStreak,
   };

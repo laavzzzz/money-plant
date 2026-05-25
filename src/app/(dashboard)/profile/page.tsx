@@ -22,11 +22,12 @@ export default function ProfilePage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   return (
-    <main className="min-h-screen p-6 pb-32 max-w-2xl mx-auto space-y-8 bg-[#fffdf6]">
-      {/* --- TOP NAV --- */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-black italic tracking-tighter uppercase">My Character</h1>
-        <button className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 hover:rotate-90 transition-transform duration-500">
+    <div className="w-full min-w-0 space-y-6 sm:space-y-8">
+      <div className="flex justify-between items-center gap-3">
+        <p className="text-xs font-bold text-text-light sm:hidden">Character sheet</p>
+        <button
+          type="button"
+          className="p-3 glass-panel rounded-2xl hover:rotate-90 transition-transform duration-500 ml-auto shrink-0"
           <Settings className="text-gray-400" size={20} />
         </button>
       </div>
@@ -52,7 +53,7 @@ export default function ProfilePage() {
       </div>
 
       {/* --- AURA & STATS GRID --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-black text-white p-6 rounded-[35px] flex justify-between items-center shadow-xl">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Aura</p>
@@ -125,7 +126,7 @@ export default function ProfilePage() {
           Money Plant v1.0.4 — Build #4402
         </p>
       </div>
-    </main>
+    </div>
   );
 }
 
