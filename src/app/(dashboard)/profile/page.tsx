@@ -1,178 +1,127 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  Settings,
-  ChevronRight,
-  Award,
-  Bell,
-  Mail,
-  Smartphone,
-  Image as ImageIcon,
-  Moon,
-  Sun,
-  Code,
-  Camera,
-  Zap,
-  Heart,
-  Target,
-} from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Camera, User, Shield, Zap, Award, Star } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function ProfilePage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePic(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
 
   return (
-    <div className="w-full min-w-0 space-y-6 sm:space-y-8">
+    <div className="w-full min-w-0 space-y-6 sm:space-y-8 p-4 md:p-8 max-w-5xl mx-auto">
+      {/* HEADER */}
       <div className="flex justify-between items-center gap-3">
-        <p className="text-xs font-bold text-text-light sm:hidden">Character sheet</p>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
+          Character sheet
+        </p>
         <button
-          type="button"
-          className="p-3 glass-panel rounded-2xl hover:rotate-90 transition-transform duration-500 ml-auto shrink-0"
-          <Settings className="text-gray-400" size={20} />
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className="px-4 py-2 bg-yellow-400 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-transform shadow-sm"
+        >
+          {isDarkMode ? "Dark View" : "Light View"}
         </button>
       </div>
 
-      {/* --- HERO SECTION --- */}
-      <div className="flex flex-col items-center py-4 text-center">
-        <div className="relative">
-          <div className="w-28 h-28 bg-yellow-100 rounded-[40px] flex items-center justify-center text-5xl mb-4 border-4 border-white shadow-2xl relative z-10">
-            👩‍💻
-          </div>
-          <div className="absolute -inset-2 bg-yellow-400/20 blur-2xl rounded-full" />
-          <button className="absolute bottom-4 right-0 p-2 bg-black text-white rounded-full z-20 border-2 border-white hover:scale-110 transition-transform">
-            <ImageIcon size={14} />
-          </button>
+      {/* PROFILE INFO CARD */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+           <Zap size={200} />
         </div>
-        <h2 className="text-2xl font-black mt-2">Ananya Sharma</h2>
-        <p className="text-[10px] font-black text-yellow-600 px-3 py-1 bg-yellow-400/10 rounded-full uppercase tracking-[0.2em] mt-1">
-          Level 12 Financial Sage
-        </p>
-        <p className="text-gray-400 text-sm italic mt-3 font-medium">
-          "Grinding for that Sprout Stage 2 🪴"
-        </p>
-      </div>
-
-      {/* --- AURA & STATS GRID --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-black text-white p-6 rounded-[35px] flex justify-between items-center shadow-xl">
-          <div>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Aura</p>
-            <p className="text-3xl font-black text-yellow-400">12,450</p>
-          </div>
-          <div className="bg-yellow-400/20 p-3 rounded-2xl">
-            <Award className="text-yellow-400" size={28} />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-[35px] border border-gray-100 flex justify-between items-center shadow-sm">
-          <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Global Rank</p>
-            <p className="text-3xl font-black text-black">#42</p>
-          </div>
-          <div className="bg-blue-100 p-3 rounded-2xl">
-            <Target className="text-blue-600" size={28} />
-          </div>
-        </div>
-      </div>
-
-      {/* --- IDENTITY CORE --- */}
-      <div className="space-y-3">
-        <h3 className="text-[10px] font-black uppercase text-gray-400 ml-4 tracking-widest">Identity Core</h3>
-        <div className="bg-white rounded-[35px] p-2 border border-gray-100 shadow-sm space-y-1">
-          <DetailRow icon={<Mail size={16}/>} label="Email" value="ananya@moneyplant.dev" />
-          <DetailRow icon={<Smartphone size={16}/>} label="Phone" value="+91 98765 43210" />
-        </div>
-      </div>
-
-      {/* --- SKILL TREE --- */}
-      <div className="bg-white p-6 rounded-[35px] border border-gray-100 shadow-sm">
-        <h3 className="text-[10px] font-black uppercase text-gray-400 mb-6 tracking-widest">Skill Tree</h3>
-        <div className="space-y-5">
-          <SkillProgress label="Patience" value={85} icon={<Heart size={12}/>} color="bg-pink-400" />
-          <SkillProgress label="Precision" value={60} icon={<Zap size={12}/>} color="bg-yellow-400" />
-        </div>
-      </div>
-
-      {/* --- PREFERENCES & SOCIALS --- */}
-      <div className="space-y-3">
-        <h3 className="text-[10px] font-black uppercase text-gray-400 ml-4 tracking-widest">Settings & Squad</h3>
-        <div className="space-y-2">
-          <ProfileOption icon={<Bell size={18}/>} label="Notifications" badge="3" />
-          
-          <button 
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="w-full flex justify-between items-center p-5 bg-white rounded-3xl border border-gray-50 shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-4">
-              <div className="text-gray-400">{isDarkMode ? <Moon size={18}/> : <Sun size={18}/>}</div>
-              <span className="font-bold text-sm">{isDarkMode ? "Night Vibe" : "Day Vibe"}</span>
+        
+        <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
+          {/* AVATAR UPLOAD SECTION */}
+          <div className="relative group">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-32 h-32 md:w-40 md:h-40 rounded-[45px] bg-gray-50 border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center cursor-pointer relative"
+              onClick={triggerFileInput}
+            >
+              {profilePic ? (
+                <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center text-gray-300">
+                  <User size={48} />
+                  <span className="text-[8px] font-black uppercase mt-1">No Image</span>
+                </div>
+              )}
+              
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="text-white" size={24} />
+              </div>
+            </motion.div>
+            
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              className="hidden" 
+              accept="image/*"
+            />
+            
+            <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-white p-2.5 rounded-2xl shadow-xl">
+              <Shield size={20} />
             </div>
-            <div className="w-10 h-6 bg-gray-100 rounded-full p-1 flex items-center">
-                <div className={`w-4 h-4 rounded-full transition-all duration-300 ${isDarkMode ? 'translate-x-4 bg-black' : 'bg-yellow-400'}`} />
+          </div>
+
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none mb-2">
+              Player <span className="text-yellow-500">One</span>
+            </h1>
+            <p className="text-gray-400 font-bold uppercase text-xs tracking-[0.2em] mb-6">
+              Level 12 Wealth Guardian
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-wider border border-green-100">
+                <Star size={12} fill="currentColor" /> Active Streak: 5 Days
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-2xl text-[10px] font-black uppercase tracking-wider border border-purple-100">
+                <Award size={12} /> Pro Member
+              </div>
             </div>
-          </button>
-
-          <ProfileOption icon={<Code size={18}/>} label="Link GitHub" isConnected />
-          <ProfileOption icon={<Camera size={18}/>} label="Link Instagram" />
+          </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* --- FOOTER ACTIONS --- */}
-      <div className="pt-6">
-        <button className="w-full py-5 rounded-[30px] bg-red-50 text-red-500 font-black text-sm uppercase tracking-widest hover:bg-red-100 transition-colors">
-          Log Out
-        </button>
-        <p className="text-center text-[10px] text-gray-300 font-bold mt-6 uppercase tracking-tighter">
-          Money Plant v1.0.4 — Build #4402
-        </p>
+      {/* STATS GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatCard label="Global Aura" value="+1,240" color="text-yellow-500" />
+        <StatCard label="Savings Rate" value="64%" color="text-green-500" />
+        <StatCard label="Achievements" value="12/50" color="text-purple-500" />
       </div>
     </div>
   );
 }
 
-// --- SUB-COMPONENTS (Fixed with proper types/props) ---
-
-function DetailRow({ icon, label, value, color = "text-black" }: any) {
+function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-2xl transition-colors">
-      <div className="flex items-center gap-3">
-        <div className="text-gray-300">{icon}</div>
-        <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">{label}</span>
-      </div>
-      <span className={`text-sm font-black ${color}`}>{value}</span>
-    </div>
-  );
-}
-
-function SkillProgress({ label, value, icon, color }: any) {
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center px-1">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-400">{icon}</span>
-          <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
-        </div>
-        <span className="text-[10px] font-black">{value}%</span>
-      </div>
-      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full transition-all duration-1000`} style={{ width: `${value}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function ProfileOption({ icon, label, badge, isConnected }: any) {
-  return (
-    <div className="flex justify-between items-center p-5 bg-white rounded-3xl border border-gray-50 shadow-sm hover:scale-[1.01] transition-transform cursor-pointer">
-      <div className="flex items-center gap-4">
-        <div className="text-gray-400">{icon}</div>
-        <span className="font-bold text-sm">{label}</span>
-      </div>
-      <div className="flex items-center gap-3">
-        {badge && <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-lg">{badge}</span>}
-        {isConnected && <span className="text-[10px] font-black text-green-500 uppercase">Linked</span>}
-        <ChevronRight size={18} className="text-gray-300" />
-      </div>
-    </div>
+    <motion.div 
+      whileHover={{ y: -5 }}
+      className="bg-white p-8 rounded-[35px] border border-gray-100 shadow-sm"
+    >
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{label}</p>
+      <p className={`text-3xl font-black tracking-tighter ${color}`}>{value}</p>
+    </motion.div>
   );
 }
