@@ -55,3 +55,4 @@ function CategoryItem({
     </div>
   );
 }
+

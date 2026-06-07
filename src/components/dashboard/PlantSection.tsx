@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import ProgressBar from "../goals/ProgressBars";
 
 /* 🧠 TYPES */
-type PlantStage = {
+export type PlantStage = {
   level: number;
   name: string;
   min: number;
@@ -15,6 +15,7 @@ type PlantProps = {
   growth: number;
   stage?: PlantStage;
   status: string;
+  reducedMotion?: boolean;
 };
 
 /* 🌿 EMOJI + STYLE SYSTEM */
@@ -59,6 +60,7 @@ export default function PlantSection({
   growth,
   stage,
   status,
+  reducedMotion = false,
 }: PlantProps) {
   const safeGrowth = Math.max(0, Math.min(growth, 100));
 
@@ -82,16 +84,20 @@ export default function PlantSection({
       <div className="relative z-10">
         {/* 🌱 PLANT */}
         <motion.div
-          animate={{
-            y: [0, -10, 0],
-            rotate: [0, 3, -3, 0],
-            scale: [1, 1.06, 1],
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 3,
-            ease: "easeInOut",
-          }}
+          animate={
+            reducedMotion
+              ? { y: 0, rotate: 0, scale: 1 }
+              : {
+                  y: [0, -10, 0],
+                  rotate: [0, 3, -3, 0],
+                  scale: [1, 1.06, 1],
+                }
+          }
+          transition={
+            reducedMotion
+              ? { duration: 0 }
+              : { repeat: Infinity, duration: 3, ease: "easeInOut" }
+          }
           className="text-6xl"
         >
           {plant.emoji}

@@ -1,136 +1,90 @@
 "use client";
 
 import React from "react";
+import Sidebar from "@/components/navigation/Sidebar";
+import MobileNav from "@/components/navigation/MobileNav";
+import { Bell, Search, Leaf } from "lucide-react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "next/navigation";
-import BottomNav from "@/components/layout/BottomNav";
-import { Bell, Leaf, Search } from "lucide-react";
 import { toast } from "sonner";
-import { getPageMeta } from "@/lib/page-meta";
+import { motion } from "framer-motion";
 
-const SHELL = "w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8";
-
-function DashboardHeader() {
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/50 dark:bg-black/30 backdrop-blur-xl">
-      <div
-        className={`${SHELL} py-3 sm:py-4 flex items-center justify-between gap-3`}
-      >
-        <Link href="/dashboard" className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 bg-accent rounded-2xl flex items-center justify-center shadow-vibe shrink-0">
-            <Leaf className="text-vibe-dark w-5 h-5 sm:w-6 sm:h-6" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[9px] sm:text-[10px] font-black text-text-light uppercase tracking-[0.2em] leading-none mb-0.5 truncate">
-              My Garden
-            </p>
-            <p className="text-base sm:text-xl font-black text-text-main tracking-tight truncate">
-              MoneyPlant 🌿
-            </p>
-          </div>
-        </Link>
-
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          <div className="hidden sm:flex items-center bg-white/40 dark:bg-white/5 border border-white/50 dark:border-white/10 rounded-full px-3 py-1.5 gap-2 focus-within:ring-2 ring-primary/20">
-            <Search size={16} className="text-text-light shrink-0" />
-            <input
-              type="search"
-              placeholder="Search wealth..."
-              className="bg-transparent border-none text-sm outline-none w-28 lg:w-40 placeholder:text-text-light/50"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => toast.info("No new alerts — you're all caught up! 🔔")}
-            className="relative p-2 sm:p-2.5 rounded-full bg-white/60 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:scale-105 active:scale-95 transition-transform"
-            aria-label="Notifications"
-          >
-            <Bell size={18} className="sm:w-5 sm:h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border border-white dark:border-black" />
-          </button>
-
-          <Link
-            href="/profile"
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px] hover:scale-105 transition-transform"
-            aria-label="Profile"
-          >
-            <div className="w-full h-full rounded-full bg-bg-main flex items-center justify-center text-base">
-              👩‍💻
-            </div>
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-export default function DashboardLayout({
+export default function DashboardGroupLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const meta = getPageMeta(pathname);
-  const today = new Date().toLocaleDateString("en-IN", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-
   return (
-    <div className="relative min-h-[100dvh] flex flex-col bg-bg-main">
-      <DashboardHeader />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#FAFAFC] dark:bg-[#0B0B0D] relative overflow-hidden transition-colors duration-500">
+      
+      {/* 🌿 SIDEBAR (Desktop) */}
+      <Sidebar />
 
-      <main className={`${SHELL} flex-1 pt-5 sm:pt-8 pb-28 sm:pb-32`}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="w-full min-w-0"
-          >
-            <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
-              <div className="min-w-0">
-                <span className="inline-flex items-center gap-2 text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mb-2 sm:mb-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  Live
-                </span>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-text-main tracking-tighter">
-                  {meta.title}
-                </h1>
-                {meta.subtitle && (
-                  <p className="text-xs sm:text-sm font-bold text-text-light mt-1">
-                    {meta.subtitle}
-                  </p>
-                )}
-              </div>
-              <p className="text-[10px] sm:text-xs font-bold text-text-light uppercase tracking-widest shrink-0 hidden xs:block sm:text-right">
-                {today}
-              </p>
+      {/* 🚀 MAIN CONTENT AREA */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+        
+        {/* TOP NAVBAR (Header for mobile and search/notifications for desktop) */}
+        <header className="sticky top-0 z-30 w-full border-b border-white/20 bg-white/40 dark:bg-black/20 backdrop-blur-xl py-3 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+          
+          {/* Brand Logo for Mobile */}
+          <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
+            <div className="w-8 h-8 bg-success/20 rounded-xl flex items-center justify-center shadow-sm">
+              <Leaf className="text-emerald-500 w-4.5 h-4.5" />
             </div>
+            <span className="font-black text-sm tracking-tight text-text-main">
+              MoneyPlant 🌿
+            </span>
+          </Link>
 
-            <div className="w-full min-w-0">{children}</div>
-          </motion.div>
-        </AnimatePresence>
-      </main>
+          {/* Search bar - Desktop */}
+          <div className="hidden sm:flex items-center bg-white/50 dark:bg-white/5 border border-white/80 dark:border-white/10 rounded-full px-4 py-2 gap-2 focus-within:ring-2 focus-within:ring-primary/20 w-64 lg:w-80">
+            <Search size={16} className="text-text-light shrink-0" />
+            <input
+              type="search"
+              placeholder="Search assets..."
+              className="bg-transparent border-none text-xs outline-none w-full placeholder:text-text-light/50 font-bold"
+            />
+          </div>
 
-      <BottomNav />
+          {/* Action Row */}
+          <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+            {/* Notifications */}
+            <button
+              type="button"
+              onClick={() => toast.info("Everything is green and growing! 🌱")}
+              className="relative p-2.5 rounded-full bg-white/70 dark:bg-white/5 border border-white/80 dark:border-white/10 hover:scale-105 active:scale-95 transition-transform"
+              aria-label="Notifications"
+            >
+              <Bell size={18} className="text-text-main" />
+              <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-primary rounded-full border border-white dark:border-zinc-950 animate-pulse" />
+            </button>
 
-      <div
-        className="fixed inset-0 -z-50 pointer-events-none overflow-hidden"
-        aria-hidden="true"
-      >
-        <div className="vibe-canvas absolute inset-0 opacity-40 dark:opacity-20" />
-        <div className="absolute top-[-15%] left-[-10%] w-[50%] max-w-xl h-[50%] rounded-full bg-primary/15 blur-[120px]" />
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] max-w-xl h-[50%] rounded-full bg-accent/15 blur-[120px]" />
+            {/* Profile Avatar (Mobile) */}
+            <Link
+              href="/profile"
+              className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px] hover:scale-105 active:scale-95 transition-transform lg:hidden"
+              aria-label="Profile"
+            >
+              <div className="w-full h-full rounded-full bg-[#FAFAFC] dark:bg-[#0B0B0D] flex items-center justify-center text-sm">
+                👩‍💻
+              </div>
+            </Link>
+          </div>
+        </header>
+
+        {/* PAGE CONTENT CONTAINER */}
+        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-28 lg:pb-8 min-w-0 max-w-6xl w-full mx-auto">
+          {children}
+        </main>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 h-24 sm:h-28 bg-gradient-to-t from-bg-main via-bg-main/90 to-transparent pointer-events-none z-30" />
+      {/* 📱 MOBILE NAVIGATION BAR */}
+      <MobileNav />
+
+      {/* BACKGROUND GRAPHIC ORNAMENTS */}
+      <div className="absolute inset-0 -z-50 pointer-events-none overflow-hidden" aria-hidden="true">
+        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[100px] dark:bg-primary/5" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[45%] h-[45%] rounded-full bg-secondary/10 blur-[120px] dark:bg-secondary/5" />
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { tryMongoConnect } from "@/lib/data/mongo";
-import Goal from "@/models/Goal";
+import { Goal } from "@/models/Goal";
 import {
   listLocalGoals,
   addLocalGoal,

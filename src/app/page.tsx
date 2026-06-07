@@ -3,7 +3,8 @@
 import React, { useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, Zap, ArrowUpRight } from "lucide-react";
+import { Sparkles, TrendingUp, Zap, ArrowUpRight, Leaf } from "lucide-react";
+import MoneyBackground from "../../MoneyBackground";
 
 export default function LandingPage() {
   const vibePreviewRef = useRef<HTMLDivElement>(null);
@@ -13,35 +14,19 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-black overflow-hidden relative">
-      {/* --- BACKGROUND ANIMATION ELEMENTS --- */}
-      <div className="absolute inset-0 pointer-events-none">
-        <motion.div 
-          animate={{ y: [0, -30, 0], x: [0, 20, 0], rotate: [0, 10, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[15%] left-[10%] text-6xl md:text-8xl opacity-20 filter blur-sm"
-        >
-          💰
-        </motion.div>
-        <motion.div 
-          animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -10, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-[20%] right-[10%] text-6xl md:text-8xl opacity-20 filter blur-sm"
-        >
-          🌱
-        </motion.div>
-        <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-yellow-400/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-primary/10 rounded-full blur-[120px]" />
-      </div>
+    <div className="min-h-screen bg-transparent text-white overflow-hidden relative">
+      {/* --- CURSOR REPEL BACKGROUND --- */}
+      <MoneyBackground />
 
       {/* --- NAVIGATION --- */}
       <nav className="relative z-50 flex justify-between items-center p-6 max-w-7xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="text-2xl font-black italic tracking-tighter"
+          className="flex items-center gap-3 text-2xl font-black italic tracking-tighter"
         >
-          MONEYPLANT<span className="text-primary">.</span>
+          <Leaf size={28} className="text-primary" />
+          MONEYPLANT
         </motion.div>
         
         <div className="flex gap-4">
@@ -71,10 +56,10 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-6xl md:text-9xl font-black tracking-tighter leading-[0.9] mb-8"
+          className="text-6xl md:text-9xl font-black tracking-tighter leading-[0.9] mb-8 text-white"
         >
           STOP SAVING.<br />
-          <span className="text-primary italic underline decoration-black decoration-4 underline-offset-8">START GROWING.</span>
+          <span className="text-primary italic underline decoration-primary decoration-4 underline-offset-8">START GROWING.</span>
         </motion.h1>
 
         <motion.p 
@@ -140,11 +125,56 @@ export default function LandingPage() {
         </motion.div>
       </main>
 
-      {/* --- FOOTER BANNER --- */}
-      <footer className="py-10 text-center border-t border-gray-50">
-        <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.5em]">
-          Designed for the 1% of Main Characters
-        </p>
+      {/* --- FOOTER --- */}
+      <footer className="relative z-10 py-20 px-6 border-t border-gray-100 bg-white/50 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+          {/* Brand & Socials */}
+          <div className="col-span-1 md:col-span-2">
+            <div className="text-2xl font-black italic tracking-tighter mb-4">
+              MONEYPLANT<span className="text-primary">.</span>
+            </div>
+            <p className="text-gray-400 font-medium max-w-sm mb-6">
+              The ultimate wealth-building RPG. Level up your financial aura and grow your garden from seed to sanctuary.
+            </p>
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-primary transition-colors cursor-pointer">𝕏</div>
+              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-primary transition-colors cursor-pointer">👾</div>
+              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-primary transition-colors cursor-pointer">🐙</div>
+            </div>
+          </div>
+
+          {/* Sitemap */}
+          <div>
+            <h4 className="font-black uppercase text-[10px] tracking-widest text-gray-950 mb-6">Quests</h4>
+            <ul className="space-y-4 text-sm font-bold text-gray-400">
+              <li className="hover:text-primary cursor-pointer transition-colors">Aura Ranking</li>
+              <li className="hover:text-primary cursor-pointer transition-colors">Garden Mechanics</li>
+              <li className="hover:text-primary cursor-pointer transition-colors">The Vault</li>
+              <li className="hover:text-primary cursor-pointer transition-colors">Patch Notes</li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h4 className="font-black uppercase text-[10px] tracking-widest text-gray-950 mb-6">Governance</h4>
+            <ul className="space-y-4 text-sm font-bold text-gray-400">
+              <li className="hover:text-primary cursor-pointer transition-colors">Privacy Lore</li>
+              <li className="hover:text-primary cursor-pointer transition-colors">Terms of Service</li>
+              <li className="hover:text-primary cursor-pointer transition-colors">Cookie Policy</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom Banner */}
+        <div className="max-w-7xl mx-auto mt-20 pt-10 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
+          <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.5em]">
+            Designed for the 1% of Main Characters
+          </p>
+          <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+            All Systems Operational
+          </div>
+        </div>
       </footer>
     </div>
   );
