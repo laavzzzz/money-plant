@@ -9,10 +9,10 @@ export default function Sidebar() {
 
       <nav className="flex flex-col gap-3 text-sm">
         <Link href="/dashboard">🏠 Dashboard</Link>
-        <Link href="/transactions">💸 Transactions</Link>
-        <Link href="/analytics">📊 Analytics</Link>
-        <Link href="/goals">🎯 Goals</Link>
-        <Link href="/leaderboard">🏆 Leaderboard</Link>
+        <Link href="/dashboard/transactions">💸 Transactions</Link>
+        <Link href="/dashboard/analytics">📊 Analytics</Link>
+        <Link href="/dashboard/goals">🎯 Goals</Link>
+        <Link href="/dashboard/leaderboard">🏆 Leaderboard</Link>
       </nav>
     </aside>
   );

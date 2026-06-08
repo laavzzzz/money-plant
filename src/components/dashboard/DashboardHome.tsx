@@ -127,7 +127,7 @@ function RecentActivity({ transactions }: { transactions: Transaction[] }) {
                     {tx.category || "General"}
                   </p>
                   <p className="text-[10px] opacity-50 uppercase font-black">
-                    {new Date(tx.date || new Date()).toLocaleDateString()}
+                    {tx.date ? new Date(tx.date).toLocaleDateString() : "—"}
                   </p>
                 </div>
               </div>
@@ -320,7 +320,7 @@ export default function DashboardHome() {
             <StreakCard streak={streak} />
           </motion.div>
           <motion.div variants={variants.item} layout="position">
-            <RecentActivity transactions={transactions?.filter(tx => tx.date != null) || []} />
+            <RecentActivity transactions={transactions?.filter(tx => tx.date !== undefined) || []} />
           </motion.div>
         </aside>
 

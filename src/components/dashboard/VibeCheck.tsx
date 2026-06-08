@@ -151,7 +151,7 @@ export default function VibeCheck() {
                 type="button"
                 onClick={() =>
                   card.id === 2
-                    ? router.push("/transactions")
+                    ? router.push("/dashboard/transactions")
                     : openVibeCheck()
                 }
                 className="text-[9px] font-black text-text-light/50 tracking-wider uppercase hover:text-text-main transition-colors"

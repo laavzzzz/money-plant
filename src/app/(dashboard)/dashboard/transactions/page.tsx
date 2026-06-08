@@ -11,6 +11,7 @@ import {
   Coffee,
   Car,
   Banknote,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import GlassCard from "@/components/ui/GlassCard";
@@ -56,9 +57,62 @@ export default function TransactionsPage() {
     });
   }, [transactions, activeTab, search]);
 
+  const totals = useMemo(() => {
+    return transactions.reduce(
+      (acc, tx) => {
+        if (tx.type === "income") {
+          acc.income += tx.amount;
+        } else {
+          acc.expense += tx.amount;
+        }
+        return acc;
+      },
+      { income: 0, expense: 0 }
+    );
+  }, [transactions]);
+
   return (
     <div className="w-full min-w-0 space-y-6 sm:space-y-8">
-        <section className="space-y-4 sm:space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.35em] font-black text-text-light">
+            Transactions
+          </p>
+          <h1 className="text-3xl font-black text-text-main">Track your money flow</h1>
+          <p className="text-sm text-text-light mt-2 max-w-2xl">
+            See every income and expense move, then use quick filters to spot winning habits.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => openAdd("income")}
+            leftIcon={<ArrowDownLeft size={16} />}
+          >
+            Add income
+          </Button>
+          <Button
+            type="button"
+            variant="vibe"
+            size="sm"
+            onClick={() => openAdd("expense")}
+            leftIcon={<Plus size={16} />}
+          >
+            Add expense
+          </Button>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatPill label="Income" value={`₹${totals.income.toLocaleString("en-IN")}`} icon={<ArrowDownLeft size={18} className="text-green-500" />} />
+        <StatPill label="Expense" value={`₹${totals.expense.toLocaleString("en-IN")}`} icon={<ArrowUpRight size={18} className="text-orange-500" />} />
+        <StatPill label="Net" value={`₹${(totals.income - totals.expense).toLocaleString("en-IN")}`} icon={<TrendingUp size={18} className="text-primary" />} />
+      </div>
+
+      <section className="space-y-4 sm:space-y-6">
           <div className="flex justify-between items-center gap-3">
             <p className="text-xs font-bold text-text-light uppercase tracking-widest hidden sm:block">
               Filter & search
@@ -164,11 +218,35 @@ export default function TransactionsPage() {
         <button
           type="button"
           onClick={() => openAdd("expense")}
-          className="fixed bottom-28 right-4 sm:right-6 z-40 p-4 bg-vibe-purple text-white rounded-full shadow-vibe hover:scale-110 active:scale-95 lg:hidden"
+          className="fixed bottom-8 right-4 sm:right-6 z-40 p-4 bg-vibe-purple text-white rounded-full shadow-vibe hover:scale-110 active:scale-95"
           aria-label="Add transaction"
         >
           <Plus size={28} strokeWidth={3} />
         </button>
+    </div>
+  );
+}
+
+function StatPill({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="glass-panel p-4 rounded-3xl flex items-center gap-3">
+      <div className="w-11 h-11 grid place-items-center rounded-3xl bg-black/5">
+        {icon}
+      </div>
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.35em] font-black text-text-light">
+          {label}
+        </p>
+        <p className="text-lg font-black text-text-main mt-1">{value}</p>
+      </div>
     </div>
   );
 }

@@ -10,10 +10,12 @@ export const APP_CONFIG = {
 
 export const PLANT_LEVELS = [
   { level: 1, name: "Seed 🌱", min: 0 },
-  { level: 2, name: "Sprout 🌿", min: 500 },
-  { level: 3, name: "Plant 🌱", min: 2000 },
-  { level: 4, name: "Tree 🌳", min: 5000 },
-  { level: 5, name: "Bloom 🌸", min: 10000 },
+  { level: 2, name: "Sprout 🌿", min: 5 },
+  { level: 3, name: "Leaf 🍃", min: 15 },
+  { level: 4, name: "Plant 🌱", min: 30 },
+  { level: 5, name: "Tree 🌳", min: 50 },
+  { level: 6, name: "Bloom 🌸", min: 75 },
+  { level: 7, name: "Fruit 🍉", min: 95 },
 ];
 
 /* 🔥 STREAK CONFIG */

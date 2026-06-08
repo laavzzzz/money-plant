@@ -25,7 +25,7 @@ export default function QuickActions() {
       </button>
       <button
         type="button"
-        onClick={() => router.push("/wishlist")}
+        onClick={() => router.push("/dashboard/wishlist")}
         className="flex-1 bg-yellow-100 text-yellow-700 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-yellow-200 transition-colors active:scale-95"
       >
         Wishlist

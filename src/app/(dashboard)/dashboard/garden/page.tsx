@@ -1,41 +1,79 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Droplets, Trophy, Target, Sparkles, ChevronRight, Leaf } from "lucide-react";
+import { Droplets, Sparkles, Leaf, ChevronRight, Target, Trophy } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
-import  Button  from "@/components/ui/Button";
+import Button from "@/components/ui/Button";
+import { useFinanceContext } from "@/components/providers/FinanceProvider";
+import { usePlant } from "@/hooks/usePlant";
+import { PLANT_LEVELS } from "@/lib/constants/config";
 import { cn } from "@/lib/utils";
+
+const STAGES = PLANT_LEVELS.map((stage) => ({
+  ...stage,
+  label: stage.name,
+}));
 
 export default function GardenPage() {
   const router = useRouter();
+  const { transactions, income, expense, savings, streak } = useFinanceContext();
+  const { growth, plantStage, nextStage, progressToNext, status } = usePlant(transactions);
   const [isWatering, setIsWatering] = useState(false);
-  const progress = 65;
+  const progress = Math.round(progressToNext);
+
+  const plantMood = useMemo(() => {
+    if (growth < 5) return "seeded";
+    if (growth < 15) return "sprouting";
+    if (growth < 30) return "leafy";
+    if (growth < 50) return "planting";
+    if (growth < 75) return "treeing";
+    if (growth < 95) return "blooming";
+    return "fruiting";
+  }, [growth]);
 
   const handleWaterPlant = async () => {
     setIsWatering(true);
     try {
       await fetch("/api/streak", { method: "POST" });
-      toast.success("Plant watered! Streak updated 🌿");
+      toast.success("Watered the vibes — streak boosted 🌿");
     } catch {
-      toast.error("Could not water plant — try again");
+      toast.error("Plant hydration failed. Try again in a sec.");
     } finally {
-      window.setTimeout(() => setIsWatering(false), 1500);
+      window.setTimeout(() => setIsWatering(false), 1400);
     }
   };
 
   return (
     <div className="w-full min-w-0 space-y-6 sm:space-y-8">
-      <section className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
-        <div>
-          <p className="text-xs font-black text-primary uppercase tracking-widest">Level 14</p>
-          <p className="text-sm font-bold text-text-light">Your growing money tree</p>
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
+          <div className="space-y-2">
+            <p className="text-xs font-black text-primary uppercase tracking-widest">{plantStage.label}</p>
+            <p className="text-sm font-bold text-text-light">Your growing money tree</p>
+            <p className="text-xs font-bold text-text-light">{status}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold text-text-light uppercase">Total Saved</p>
+            <p className="text-xl font-black text-accent-dark">₹{savings.toLocaleString("en-IN")}</p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-bold text-text-light uppercase">Total Saved</p>
-          <p className="text-xl font-black text-accent-dark">₹42,000</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="glass-panel p-4 rounded-3xl border border-white/10 bg-white/60 dark:bg-white/5">
+            <p className="text-[10px] uppercase tracking-[0.35em] font-black text-text-light">Current mood</p>
+            <p className="mt-3 text-lg font-black text-text-main uppercase">{plantMood}</p>
+          </div>
+          <div className="glass-panel p-4 rounded-3xl border border-white/10 bg-white/60 dark:bg-white/5">
+            <p className="text-[10px] uppercase tracking-[0.35em] font-black text-text-light">Next stage</p>
+            <p className="mt-3 text-lg font-black text-text-main uppercase">{nextStage?.label ?? "Mastery"}</p>
+          </div>
+          <div className="glass-panel p-4 rounded-3xl border border-white/10 bg-white/60 dark:bg-white/5">
+            <p className="text-[10px] uppercase tracking-[0.35em] font-black text-text-light">Streak</p>
+            <p className="mt-3 text-lg font-black text-text-main uppercase">{streak} days</p>
+          </div>
         </div>
       </section>
 
@@ -93,9 +131,14 @@ export default function GardenPage() {
               className="h-full bg-gradient-to-r from-primary to-accent rounded-full shadow-[0_0_15px_rgba(195,172,255,0.5)]"
             />
           </div>
-          <p className="text-[10px] text-center font-bold text-text-light uppercase tracking-tighter">
-            Save ₹1,500 more to unlock the "Golden Oak" stage
-          </p>
+          <div className="flex flex-col gap-2 text-xs text-text-light uppercase tracking-tighter">
+            <p className="text-center font-bold">{nextStage ? `Next stage: ${nextStage.label}` : "Max growth unlocked"}</p>
+            <p className="text-center">
+              {nextStage
+                ? `You’re ${progress}% of the way to ${nextStage.label}. Keep saving to bloom.`
+                : "Your plant is fully grown — keep the good habits going."}
+            </p>
+          </div>
         </GlassCard>
 
         {/* Action Grid */}
@@ -112,7 +155,7 @@ export default function GardenPage() {
             variant="primary"
             fullWidth
             leftIcon={<Target size={18} />}
-            onClick={() => router.push("/goals")}
+            onClick={() => router.push("/dashboard/goals")}
           >
             Set Goal
           </Button>

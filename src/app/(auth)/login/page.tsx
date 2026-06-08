@@ -1,13 +1,119 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, AtSign, Phone, ChevronRight, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedSession = typeof window !== "undefined" ? localStorage.getItem("moneyplant-session") : null;
+    if (storedSession) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
+
+  const resetMessages = () => {
+    setError("");
+    setSuccess("");
+  };
+
+  function getStoredUsers() {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem("moneyplant-users") || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function saveUser(user: { id: string; name: string; email?: string; phone?: string; password: string }) {
+    const users = getStoredUsers();
+    localStorage.setItem("moneyplant-users", JSON.stringify([...users, user]));
+  }
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    resetMessages();
+
+    const identifier = authMethod === "email" ? email.trim().toLowerCase() : phone.trim();
+    const users = getStoredUsers();
+
+    if (mode === "signup") {
+      if (!name.trim()) {
+        setError("Please enter your full name.");
+        return;
+      }
+      if (!identifier) {
+        setError(`Please enter your ${authMethod === "email" ? "email address" : "phone number"}.`);
+        return;
+      }
+      if (!password.trim() || password.length < 6) {
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+
+      const duplicate = users.find((user: any) =>
+        authMethod === "email"
+          ? user.email === identifier
+          : user.phone === identifier
+      );
+
+      if (duplicate) {
+        setError(`An account already exists with this ${authMethod === "email" ? "email" : "phone number"}.`);
+        return;
+      }
+
+      const newUser = {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        email: authMethod === "email" ? identifier : undefined,
+        phone: authMethod === "phone" ? identifier : undefined,
+        password: password.trim(),
+      };
+      saveUser(newUser);
+      localStorage.setItem("moneyplant-session", JSON.stringify({ id: newUser.id, name: newUser.name, email: newUser.email, phone: newUser.phone }));
+      setSuccess("Account created successfully. Redirecting to the dashboard...");
+      setTimeout(() => router.push("/dashboard"), 800);
+      return;
+    }
+
+    if (!identifier) {
+      setError(`Please enter your ${authMethod === "email" ? "email address" : "phone number"}.`);
+      return;
+    }
+    if (!password.trim()) {
+      setError("Please enter your password.");
+      return;
+    }
+
+    const existingUser = users.find((user: any) => {
+      return (
+        (authMethod === "email" && user.email === identifier && user.password === password.trim()) ||
+        (authMethod === "phone" && user.phone === identifier && user.password === password.trim())
+      );
+    });
+
+    if (!existingUser) {
+      setError("No matching account found. Please check your credentials or create a new account.");
+      return;
+    }
+
+    localStorage.setItem("moneyplant-session", JSON.stringify({ id: existingUser.id, name: existingUser.name, email: existingUser.email, phone: existingUser.phone }));
+    setSuccess("Welcome back! Redirecting to your dashboard...");
+    setTimeout(() => router.push("/dashboard"), 600);
+  };
 
   return (
     <main className="min-h-screen bg-[#fffdf6] flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -65,7 +171,20 @@ export default function LoginPage() {
           </div>
 
           {/* Dynamic Input System */}
-          <div className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-gray-400 ml-5 tracking-widest">Your Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full bg-gray-50 border-2 border-transparent focus:border-yellow-400 focus:bg-white outline-none rounded-3xl py-4.5 px-6 font-bold transition-all placeholder:text-gray-300 shadow-inner"
+                />
+              </div>
+            )}
+
             <AnimatePresence mode="wait">
               {authMethod === "email" ? (
                 <motion.div 
@@ -80,6 +199,8 @@ export default function LoginPage() {
                     <AtSign className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                     <input 
                       type="email" 
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
                       placeholder="name@moneyplant.io"
                       className="w-full bg-gray-50 border-2 border-transparent focus:border-yellow-400 focus:bg-white outline-none rounded-3xl py-4.5 pl-16 pr-6 font-bold transition-all placeholder:text-gray-300 shadow-inner"
                     />
@@ -100,6 +221,8 @@ export default function LoginPage() {
                       <Phone className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                       <input 
                         type="tel" 
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
                         placeholder="00000 00000"
                         className="w-full bg-gray-50 border-2 border-transparent focus:border-yellow-400 focus:bg-white outline-none rounded-3xl py-4.5 pl-16 pr-6 font-bold transition-all placeholder:text-gray-300 shadow-inner"
                       />
@@ -109,29 +232,53 @@ export default function LoginPage() {
               )}
             </AnimatePresence>
 
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-gray-400 ml-5 tracking-widest">Aura Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Enter your secret password"
+                className="w-full bg-gray-50 border-2 border-transparent focus:border-yellow-400 focus:bg-white outline-none rounded-3xl py-4.5 px-6 font-bold transition-all placeholder:text-gray-300 shadow-inner"
+              />
+            </div>
+
             <button 
-              onClick={() => setAuthMethod(authMethod === "email" ? "phone" : "email")}
+              type="button"
+              onClick={() => {
+                resetMessages();
+                setAuthMethod(authMethod === "email" ? "phone" : "email");
+              }}
               className="text-[10px] font-black text-green-500 uppercase tracking-widest ml-5 hover:underline flex items-center gap-1"
             >
-            
               Use {authMethod === "email" ? "Phone Number" : "Email Address"}
             </button>
-          </div>
 
-          {/* Primary Action Button */}
-          <div className="w-full">
-            <Link href="/dashboard" className="w-full bg-black text-white mt-10 py-5 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl hover:shadow-yellow-400/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group">
-              {mode === "login" ? "Enter Dashboard" : "Claim Your Garden"}
-              <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
+            {error && <div className="text-sm text-red-600 font-bold uppercase tracking-[0.2em]">{error}</div>}
+            {success && <div className="text-sm text-green-600 font-bold uppercase tracking-[0.2em]">{success}</div>}
+
+            {/* Primary Action Button */}
+            <div className="w-full">
+              <button 
+                type="submit"
+                className="w-full bg-black text-white mt-10 py-5 rounded-[32px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl hover:shadow-yellow-400/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+              >
+                {mode === "login" ? "Enter Dashboard" : "Claim Your Garden"}
+                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* Auth Toggle */}
         <p className="text-center mt-10 text-xs font-bold text-gray-400">
           {mode === "login" ? "No account?" : "Already a Legend?"}{" "}
           <button 
-            onClick={() => setMode(mode === "login" ? "signup" : "login")}
+            type="button"
+            onClick={() => {
+              resetMessages();
+              setMode(mode === "login" ? "signup" : "login");
+            }}
             className="text-black border-b-2 border-yellow-400 pb-0.5 ml-1 font-black uppercase tracking-tighter"
           >
             {mode === "login" ? "Create New" : "Sign In"}

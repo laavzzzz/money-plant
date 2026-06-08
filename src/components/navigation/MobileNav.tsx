@@ -7,20 +7,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   Home,
+  CreditCard,
   ArrowLeftRight,
-  PieChart,
   Target,
-  Trophy,
-  Sparkles
+  Leaf,
+  User,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Home", icon: Home, href: "/dashboard" },
-  { label: "History", icon: ArrowLeftRight, href: "/dashboard/transactions" },
-  { label: "Charts", icon: PieChart, href: "/dashboard/analytics" },
+  { label: "Accounts", icon: CreditCard, href: "/dashboard/accounts" },
+  { label: "Transactions", icon: ArrowLeftRight, href: "/dashboard/transactions" },
   { label: "Goals", icon: Target, href: "/dashboard/goals" },
-  { label: "Ranks", icon: Trophy, href: "/dashboard/leaderboard" },
-  { label: "AI", icon: Sparkles, href: "/dashboard/ai-buddy" },
+  { label: "Garden", icon: Leaf, href: "/dashboard/garden" },
+  { label: "Profile", icon: User, href: "/dashboard/profile" },
 ];
 
 export default function MobileNav() {

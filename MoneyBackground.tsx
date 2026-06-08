@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform, MotionValue } from "framer-motion";
 
 const MONEY_EMOJIS = ["💰", "💸", "💵", "🪙", "💹", "💎"];
@@ -24,8 +24,13 @@ function initialSpotlightPosition() {
  * 3. Floating parallax money elements that drift as the user moves.
  */
 export default function MoneyBackground() {
+  const [mounted, setMounted] = useState(false);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Spring physics for butter-smooth movement
   const springConfig = { damping: 40, stiffness: 200, mass: 0.5 };
@@ -40,11 +45,11 @@ export default function MoneyBackground() {
   const spotlight = useTransform(
     [smoothX, smoothY, bgHue],
     ([x, y, h]: number[]) => {
-      const { xp, yp, hue } = typeof window === "undefined" ? initialSpotlightPosition() : {
-        xp: (x / window.innerWidth) * 100,
-        yp: (y / window.innerHeight) * 100,
-        hue: h,
-      };
+      const screenW = mounted ? window.innerWidth : 1920;
+      const screenH = mounted ? window.innerHeight : 1080;
+      const xp = (x / screenW) * 100;
+      const yp = (y / screenH) * 100;
+      const hue = h;
       return `radial-gradient(800px circle at ${xp}% ${yp}%, hsla(${hue}, 60%, 30%, 0.25), transparent 80%)`;
     }
   );
@@ -68,13 +73,13 @@ export default function MoneyBackground() {
     >
       {/* The Cursor Spotlight Glow */}
       <motion.div 
-        style={{ background: spotlight }} 
+        style={{ backgroundImage: spotlight }} 
         className="absolute inset-0"
       />
 
       {/* Floating Money Parallax Elements */}
       {Array.from({ length: 18 }).map((_, i) => (
-        <FloatingMoney key={i} index={i} mouseX={smoothX} mouseY={smoothY} />
+        <FloatingMoney key={i} index={i} mouseX={smoothX} mouseY={smoothY} mounted={mounted} />
       ))}
 
       {/* Noise Texture Overlay for a premium feel */}
@@ -86,8 +91,9 @@ export default function MoneyBackground() {
 function FloatingMoney({ 
   index, 
   mouseX, 
-  mouseY 
-}: { index: number; mouseX: MotionValue<number>; mouseY: MotionValue<number> }) {
+  mouseY,
+  mounted,
+}: { index: number; mouseX: MotionValue<number>; mouseY: MotionValue<number>; mounted: boolean }) {
   const config = useMemo(() => {
     const random = seededRandom(1234 + index * 17);
     return {
@@ -102,8 +108,8 @@ function FloatingMoney({
 
   // Map cursor position to parallax offset with a "magnetic" pull when close
   const x = useTransform([mouseX, mouseY], ([latestX, latestY]: number[]) => {
-    const screenW = typeof window !== "undefined" ? window.innerWidth : 1920;
-    const screenH = typeof window !== "undefined" ? window.innerHeight : 1080;
+    const screenW = mounted ? window.innerWidth : 1920;
+    const screenH = mounted ? window.innerHeight : 1080;
     const baseX = (config.x / 100) * screenW;
     const baseY = (config.y / 100) * screenH;
 
@@ -111,14 +117,13 @@ function FloatingMoney({
     const dy = latestY - baseY;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    // Repel force: subtract the vector instead of adding it
     const repelForce = Math.pow(Math.max(0, 1 - distance / 500), 2) * 0.8;
     return baseX + (latestX - screenW / 2) * config.depth - dx * repelForce;
   });
 
   const y = useTransform([mouseX, mouseY], ([latestX, latestY]: number[]) => {
-    const screenH = typeof window !== "undefined" ? window.innerHeight : 1080;
-    const screenW = typeof window !== "undefined" ? window.innerWidth : 1920;
+    const screenH = mounted ? window.innerHeight : 1080;
+    const screenW = mounted ? window.innerWidth : 1920;
     const baseX = (config.x / 100) * screenW;
     const baseY = (config.y / 100) * screenH;
 

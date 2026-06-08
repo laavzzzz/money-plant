@@ -41,25 +41,15 @@ export default function LandingPage() {
 
       {/* --- HERO SECTION --- */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 pt-16 pb-24 flex flex-col items-center text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white border border-gray-100 shadow-sm px-4 py-1.5 rounded-full flex items-center gap-2 mb-8"
-        >
-          <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
-            V2.0 Now Live — The Aura Update
-          </span>
-        </motion.div>
 
         <motion.h1 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-6xl md:text-9xl font-black tracking-tighter leading-[0.9] mb-8 text-white"
+          className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.95] mb-8 text-white"
         >
-          STOP SAVING.<br />
-          <span className="text-primary italic underline decoration-primary decoration-4 underline-offset-8">START GROWING.</span>
+          STOP SAVING<br />
+          <span className="text-primary italic">START GROWING</span>
         </motion.h1>
 
         <motion.p 
@@ -125,13 +115,38 @@ export default function LandingPage() {
         </motion.div>
       </main>
 
+      {/* --- REVIEWS SLIDER --- */}
+      <section className="relative z-10 py-20 px-6 max-w-7xl mx-auto">
+        <div className="mb-10 text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 mb-4">
+            real reviews
+          </p>
+          <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-white">
+            What the community is saying
+          </h2>
+        </div>
+
+        <div className="overflow-hidden rounded-[40px] border border-gray-800 bg-black/30">
+          <motion.div
+            className="flex min-w-[200%] gap-6 px-6 py-8"
+            animate={{ x: ["-100%", "0%"] }}
+            transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
+          >
+            {REVIEW_CARDS.concat(REVIEW_CARDS).map((review, index) => (
+              <ReviewCard key={`${review.name}-${index}`} review={review} />
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
       {/* --- FOOTER --- */}
       <footer className="relative z-10 py-20 px-6 border-t border-gray-100 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand & Socials */}
           <div className="col-span-1 md:col-span-2">
-            <div className="text-2xl font-black italic tracking-tighter mb-4">
-              MONEYPLANT<span className="text-primary">.</span>
+            <div className="flex items-center gap-3 text-2xl font-black italic tracking-tighter mb-4">
+              <Leaf size={28} className="text-primary" />
+              MONEYPLANT
             </div>
             <p className="text-gray-400 font-medium max-w-sm mb-6">
               The ultimate wealth-building RPG. Level up your financial aura and grow your garden from seed to sanctuary.
@@ -192,5 +207,38 @@ function FeatureCard({ icon, title, desc, color }: any) {
       <h3 className="font-black text-xl mb-3 uppercase tracking-tighter">{title}</h3>
       <p className="text-gray-400 font-medium leading-relaxed">{desc}</p>
     </motion.div>
+  );
+}
+
+const REVIEW_CARDS = [
+  {
+    text: "MoneyPlant turned my savings into something I actually want to watch grow. The garden system keeps me motivated every day.",
+    name: "Nia",
+    role: "Student",
+  },
+  {
+    text: "The aura streaks and XP rewards make budgeting feel like a game. I actually look forward to making smart money moves.",
+    name: "Jax",
+    role: "Freelancer",
+  },
+  {
+    text: "I love how clean the app is and how easy it is to track progress. My plant actually makes me think twice before spending.",
+    name: "Mia",
+    role: "Designer",
+  },
+  {
+    text: "The vibe checks and leaderboards are my favorite. It’s the only money app I’ve used that feels fun and powerful.",
+    name: "Theo",
+    role: "Entrepreneur",
+  },
+];
+
+function ReviewCard({ review }: { review: { text: string; name: string; role: string } }) {
+  return (
+    <div className="min-w-[320px] max-w-[320px] shrink-0 rounded-[30px] border border-gray-800 bg-white/5 p-6 shadow-[0_30px_80px_rgba(0,0,0,0.15)] backdrop-blur-xl">
+      <p className="text-gray-100 font-medium leading-relaxed mb-6">“{review.text}”</p>
+      <div className="text-sm uppercase tracking-[0.22em] text-gray-500 mb-2">{review.role}</div>
+      <div className="text-lg font-black text-white">{review.name}</div>
+    </div>
   );
 }

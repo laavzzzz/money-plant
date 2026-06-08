@@ -30,6 +30,10 @@ const ROUTES: Record<string, PageMeta> = {
     title: "Profile",
     subtitle: "Your character sheet",
   },
+  "/accounts": {
+    title: "Accounts",
+    subtitle: "Connected bank and balance overview",
+  },
   "/goals": {
     title: "Goals",
     subtitle: "Savings targets",

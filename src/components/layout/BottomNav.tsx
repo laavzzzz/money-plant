@@ -17,7 +17,7 @@ import {
 /* 🗺️ NAVIGATION CONFIG */
 const NAV_ITEMS = [
   { label: "Home", icon: Home, href: "/dashboard" },
-  { label: "History", icon: ArrowLeftRight, href: "/transactions" },
+  { label: "Transactions", icon: ArrowLeftRight, href: "/transactions" },
   { label: "Garden", icon: Leaf, href: "/garden" },
   { label: "Wishlist", icon: Heart, href: "/wishlist" },
   { label: "Ranks", icon: Trophy, href: "/leaderboard" },

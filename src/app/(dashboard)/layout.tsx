@@ -60,7 +60,7 @@ export default function DashboardGroupLayout({
 
             {/* Profile Avatar (Mobile) */}
             <Link
-              href="/profile"
+              href="/dashboard/profile"
               className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px] hover:scale-105 active:scale-95 transition-transform lg:hidden"
               aria-label="Profile"
             >

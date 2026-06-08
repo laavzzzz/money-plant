@@ -149,19 +149,35 @@ export default function WishlistPage() {
 
   return (
     <div className="w-full min-w-0 space-y-5 sm:space-y-6">
-      <header className="flex justify-between items-center gap-3">
-        <p className="text-xs font-bold text-text-light sm:hidden">
-          Tap + to add items
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] font-black text-text-light">
+              Wishlist
+            </p>
+            <h1 className="text-3xl font-black text-text-main">Dream vault</h1>
+          </div>
+          <p className="max-w-2xl text-sm text-text-light">
+            Stash toward your next big purchase and watch your plant grow with every deposit.
+          </p>
+        </div>
+
         <button
           type="button"
           onClick={() => setModalOpen(true)}
           aria-label="Add wishlist item"
-          className="p-4 bg-vibe-purple text-white rounded-2xl shadow-vibe hover:scale-105 active:scale-95 transition-transform"
+          className="inline-flex items-center justify-center rounded-3xl bg-vibe-purple px-5 py-3 text-sm font-black text-white transition-transform hover:scale-105 active:scale-95"
         >
-          <Plus size={24} strokeWidth={3} />
+          <Plus size={18} className="mr-2" /> Add item
         </button>
       </header>
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <StatPill label="Dreams" value={`${filtered.length}`} accent />
+        <StatPill label="Total target" value={`₹${totals.target.toLocaleString("en-IN")}`} />
+        <StatPill label="Saved" value={`₹${totals.saved.toLocaleString("en-IN")}`} accent />
+        <StatPill label="Remaining" value={`₹${totals.remaining.toLocaleString("en-IN")}`} />
+      </div>
 
       <div className="glass-panel p-4 rounded-3xl border border-primary/20 bg-primary/5">
         <div className="flex items-start gap-2">

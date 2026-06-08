@@ -124,7 +124,7 @@ export default function AddTransactionModal({
                 <h2 className="text-2xl font-black text-text-main tracking-tighter">
                   Log {form.type === "income" ? "Income" : "Expense"}
                 </h2>
-                <button type="button" onClick={handleClose} className="p-2 bg-black/5 dark:bg-white/5 rounded-full">
+                <button type="button" onClick={handleClose} className="p-2 bg-black/5 dark:bg-white/5 rounded-full hover:bg-black/10 transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -180,25 +180,16 @@ export default function AddTransactionModal({
                   ))}
                 </div>
                 {error && <p className="text-center text-sm font-bold text-red-500">{error}</p>}
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.95 }}
-                  disabled={adding}
-                  onClick={handleSubmit}
-                  className={cn(
-                    "w-full p-6 rounded-vibe text-white font-black text-lg flex items-center justify-center gap-3",
-                    adding ? "bg-text-light opacity-50" : "bg-vibe-purple"
-                  )}
-                >
-                  {adding ? (
-                    <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Sparkles size={20} />
-                      LOG TO GARDEN
-                    </>
-                  )}
-                </motion.button>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={adding}
+                    className="w-full sm:w-auto px-12 py-4 rounded-3xl border border-black/10 dark:border-white/10 text-sm font-black uppercase tracking-[0.35em] text-text-main bg-white/80 dark:bg-white/5 hover:bg-white/100 transition-colors disabled:opacity-40"
+                  >
+                    {adding ? "Saving..." : "Done"}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>

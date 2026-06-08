@@ -7,21 +7,26 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   Home,
+  CreditCard,
   ArrowLeftRight,
   PieChart,
   Target,
+  Leaf,
+  Heart,
   Trophy,
-  Sparkles,
-  Leaf
+  User,
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "Home", icon: Home, href: "/dashboard", color: "hover:bg-primary/10 text-primary" },
-  { label: "Transactions", icon: ArrowLeftRight, href: "/dashboard/transactions", color: "hover:bg-secondary/10 text-secondary" },
-  { label: "Analytics", icon: PieChart, href: "/dashboard/analytics", color: "hover:bg-accent/20 text-[#D2B48C]" },
-  { label: "Goals", icon: Target, href: "/dashboard/goals", color: "hover:bg-success/20 text-[#88D49E]" },
-  { label: "Leaderboard", icon: Trophy, href: "/dashboard/leaderboard", color: "hover:bg-primary/20 text-[#C3ACFF]" },
-  { label: "AI Planty", icon: Sparkles, href: "/dashboard/ai-buddy", color: "hover:bg-secondary/20 text-[#FFB5E8]" },
+  { label: "Dashboard", icon: Home, href: "/dashboard" },
+  { label: "Accounts", icon: CreditCard, href: "/dashboard/accounts" },
+  { label: "Transactions", icon: ArrowLeftRight, href: "/dashboard/transactions" },
+  { label: "Analytics", icon: PieChart, href: "/dashboard/analytics" },
+  { label: "Goals", icon: Target, href: "/dashboard/goals" },
+  { label: "Garden", icon: Leaf, href: "/dashboard/garden" },
+  { label: "Wishlist", icon: Heart, href: "/dashboard/wishlist" },
+  { label: "Leaderboard", icon: Trophy, href: "/dashboard/leaderboard" },
+  { label: "Profile", icon: User, href: "/dashboard/profile" },
 ];
 
 export default function Sidebar() {
@@ -102,16 +107,6 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* User profile capsule card */}
-      <div className="glass-panel p-4 flex items-center gap-3 bg-white/40 dark:bg-white/5 border border-white/30 rounded-3xl shadow-sm">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#C3ACFF] to-[#FFB5E8] flex items-center justify-center text-lg select-none">
-          👩‍💻
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-black text-sm text-text-main truncate">Ananya Sharma</p>
-          <p className="text-[10px] font-bold text-success uppercase tracking-wider">Level 12 Florist</p>
-        </div>
-      </div>
     </aside>
   );
 }

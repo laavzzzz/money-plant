@@ -23,7 +23,7 @@ export default function ActionButtons() {
       icon: <Heart size={18} />,
       color: "text-orange-500",
       bg: "bg-orange-500/10",
-      onClick: () => router.push("/wishlist"),
+      onClick: () => router.push("/dashboard/wishlist"),
     },
     {
       label: "AI",

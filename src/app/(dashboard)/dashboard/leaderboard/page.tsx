@@ -1,22 +1,66 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { ArrowRight, Sparkles } from "lucide-react";
+import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 const leaders = [
-  { rank: 1, name: "MoneyMonk", aura: 34550, emoji: "🐒", trophy: "🥇" },
-  { rank: 2, name: "SaverGirl", aura: 18450, emoji: "🌸", trophy: "🥈" },
-  { rank: 3, name: "FrugalKing", aura: 15230, emoji: "👑", trophy: "🥉" },
+  { rank: 1, name: "MoneyMonk", aura: 34550, emoji: "🐒" },
+  { rank: 2, name: "SaverGirl", aura: 18450, emoji: "🌸" },
+  { rank: 3, name: "FrugalKing", aura: 15230, emoji: "👑" },
   { rank: 4, name: "BudgetBoss", aura: 13400, emoji: "💼" },
   { rank: 5, name: "SaveMaster", aura: 12450, emoji: "🧙" },
 ];
 
 export default function LeaderboardPage() {
   const [tab, setTab] = useState<"month" | "all">("month");
+  const router = useRouter();
 
   return (
     <div className="w-full min-w-0 space-y-6 sm:space-y-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.35em] font-black text-text-light">
+            Leaderboard
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 grid place-items-center rounded-3xl bg-secondary/10 text-secondary">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-black text-text-main">
+                Who&apos;s winning the wealth game?
+              </h1>
+              <p className="text-sm text-text-light leading-relaxed max-w-2xl">
+                Compare your aura with top savers and jump into the leaderboard challenge.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.push("/dashboard/profile")}
+            leftIcon={<ArrowRight size={16} />}
+          >
+            View stats
+          </Button>
+          <Button
+            variant="vibe"
+            size="sm"
+            onClick={() => router.push("/dashboard/transactions")}
+            leftIcon={<ArrowRight size={16} />}
+          >
+            Add cash
+          </Button>
+        </div>
+      </header>
+
       <div className="flex justify-center sm:justify-start gap-2 p-1 bg-black/5 dark:bg-white/5 rounded-full w-full sm:w-fit">
         <button
           type="button"
@@ -52,13 +96,16 @@ export default function LeaderboardPage() {
 
       <ul className="space-y-3 max-w-2xl mx-auto sm:max-w-none w-full">
         {leaders.map((user) => (
-          <motion.li
+          <motion.button
             key={user.rank}
+            type="button"
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: user.rank * 0.04 }}
+            onClick={() => router.push("/dashboard/profile")}
+            className="w-full"
           >
-            <div className="glass-panel p-4 flex justify-between items-center gap-3 min-w-0">
+            <div className="glass-panel p-4 flex justify-between items-center gap-3 min-w-0 hover:bg-white/80 dark:hover:bg-gray-900 transition-colors">
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <span className="font-bold text-text-light w-5 shrink-0">{user.rank}</span>
                 <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-500/20 rounded-full flex items-center justify-center text-xl shrink-0">
@@ -66,11 +113,14 @@ export default function LeaderboardPage() {
                 </div>
                 <span className="font-bold text-sm truncate">{user.name}</span>
               </div>
-              <span className="text-xs font-black text-green-500 shrink-0">
-                +{user.aura.toLocaleString("en-IN")} Aura
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-green-500 shrink-0">
+                  +{user.aura.toLocaleString("en-IN")} Aura
+                </span>
+                <ArrowRight size={16} className="text-text-light" />
+              </div>
             </div>
-          </motion.li>
+          </motion.button>
         ))}
       </ul>
     </div>
