@@ -4,18 +4,35 @@ import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Droplets, Sparkles, Leaf, ChevronRight, Target, Trophy } from "lucide-react";
+import {
+  Apple,
+  ChevronRight,
+  CircleDot,
+  Droplets,
+  Flower2,
+  Leaf,
+  LucideIcon,
+  Sparkles,
+  Sprout,
+  Target,
+  TreePine,
+  Trophy,
+} from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
 import Button from "@/components/ui/Button";
 import { useFinanceContext } from "@/components/providers/FinanceProvider";
 import { usePlant } from "@/hooks/usePlant";
-import { PLANT_LEVELS } from "@/lib/constants/config";
 import { cn } from "@/lib/utils";
 
-const STAGES = PLANT_LEVELS.map((stage) => ({
-  ...stage,
-  label: stage.name,
-}));
+const STAGE_ICONS: Record<number, LucideIcon> = {
+  1: CircleDot,
+  2: Sprout,
+  3: Leaf,
+  4: Sprout,
+  5: TreePine,
+  6: Flower2,
+  7: Apple,
+};
 
 export default function GardenPage() {
   const router = useRouter();
@@ -23,6 +40,7 @@ export default function GardenPage() {
   const { growth, plantStage, nextStage, progressToNext, status } = usePlant(transactions);
   const [isWatering, setIsWatering] = useState(false);
   const progress = Math.round(progressToNext);
+  const StageIcon = STAGE_ICONS[plantStage.level] ?? Leaf;
 
   const plantMood = useMemo(() => {
     if (growth < 5) return "seeded";
@@ -51,7 +69,7 @@ export default function GardenPage() {
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
           <div className="space-y-2">
-            <p className="text-xs font-black text-primary uppercase tracking-widest">{plantStage.label}</p>
+            <p className="text-xs font-black text-primary uppercase tracking-widest">{plantStage.name}</p>
             <p className="text-sm font-bold text-text-light">Your growing money tree</p>
             <p className="text-xs font-bold text-text-light">{status}</p>
           </div>
@@ -68,7 +86,7 @@ export default function GardenPage() {
           </div>
           <div className="glass-panel p-4 rounded-3xl border border-white/10 bg-white/60 dark:bg-white/5">
             <p className="text-[10px] uppercase tracking-[0.35em] font-black text-text-light">Next stage</p>
-            <p className="mt-3 text-lg font-black text-text-main uppercase">{nextStage?.label ?? "Mastery"}</p>
+            <p className="mt-3 text-lg font-black text-text-main uppercase">{nextStage?.name ?? "Mastery"}</p>
           </div>
           <div className="glass-panel p-4 rounded-3xl border border-white/10 bg-white/60 dark:bg-white/5">
             <p className="text-[10px] uppercase tracking-[0.35em] font-black text-text-light">Streak</p>
@@ -88,7 +106,7 @@ export default function GardenPage() {
         >
           {/* This is where you'd eventually drop a Rive or Lottie component */}
           <div className="w-56 h-56 bg-gradient-to-b from-accent/40 to-accent rounded-full flex items-center justify-center shadow-float border-8 border-white/50 relative">
-             <Leaf size={100} className="text-white drop-shadow-2xl" />
+             <StageIcon size={100} className="text-white drop-shadow-2xl" strokeWidth={1.7} />
              
              {/* Droplets Animation */}
              <AnimatePresence>
@@ -132,10 +150,10 @@ export default function GardenPage() {
             />
           </div>
           <div className="flex flex-col gap-2 text-xs text-text-light uppercase tracking-tighter">
-            <p className="text-center font-bold">{nextStage ? `Next stage: ${nextStage.label}` : "Max growth unlocked"}</p>
+            <p className="text-center font-bold">{nextStage ? `Next stage: ${nextStage.name}` : "Max growth unlocked"}</p>
             <p className="text-center">
               {nextStage
-                ? `You’re ${progress}% of the way to ${nextStage.label}. Keep saving to bloom.`
+                ? `You’re ${progress}% of the way to ${nextStage.name}. Keep saving to bloom.`
                 : "Your plant is fully grown — keep the good habits going."}
             </p>
           </div>

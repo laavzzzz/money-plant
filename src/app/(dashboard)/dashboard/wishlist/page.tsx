@@ -9,6 +9,8 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
+  StickyNote,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -32,6 +34,23 @@ export type WishlistItem = {
   savedSoFar: number;
   targetMonth: string;
   genZComment: string;
+  priority?: "low" | "medium" | "high";
+  status?: "planned" | "saving" | "ready" | "purchased";
+  purchaseUrl?: string;
+  notes?: string;
+};
+
+const STATUS_LABELS: Record<NonNullable<WishlistItem["status"]>, string> = {
+  planned: "Planned",
+  saving: "Saving",
+  ready: "Ready",
+  purchased: "Purchased",
+};
+
+const PRIORITY_LABELS: Record<NonNullable<WishlistItem["priority"]>, string> = {
+  high: "High priority",
+  medium: "Medium priority",
+  low: "Low priority",
 };
 
 export default function WishlistPage() {
@@ -95,7 +114,11 @@ export default function WishlistPage() {
           monthlySave: Number(values.monthlySave),
           targetMonth: values.targetMonth,
           genZComment: values.genZComment,
-          savedSoFar: 0,
+          savedSoFar: Number(values.savedSoFar || 0),
+          priority: values.priority,
+          status: values.status,
+          purchaseUrl: values.purchaseUrl,
+          notes: values.notes,
         }),
       });
       const data = await res.json();
@@ -114,6 +137,34 @@ export default function WishlistPage() {
     if (data.success) {
       toast.success("Removed from wishlist");
       setItems((prev) => prev.filter((i) => i._id !== id));
+    }
+  };
+
+  const patchItem = async (id: string, patch: Partial<WishlistItem>) => {
+    const res = await fetch(`/api/wishlist/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message ?? "Could not update item");
+    setItems((prev) => prev.map((i) => (i._id === id ? { ...i, ...data.item } : i)));
+    return data.item as WishlistItem;
+  };
+
+  const handleStatusChange = async (
+    item: WishlistItem,
+    status: NonNullable<WishlistItem["status"]>
+  ) => {
+    try {
+      const patch =
+        status === "purchased"
+          ? { status, savedSoFar: item.amount }
+          : { status };
+      await patchItem(item._id, patch);
+      toast.success(`${item.name} marked ${STATUS_LABELS[status].toLowerCase()}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update status");
     }
   };
 
@@ -171,6 +222,15 @@ export default function WishlistPage() {
           <Plus size={18} className="mr-2" /> Add item
         </button>
       </header>
+
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        aria-label="Add wishlist item"
+        className="fixed bottom-28 left-4 z-[60] flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-500/30 ring-4 ring-white/50 transition-transform hover:scale-105 active:scale-95 dark:ring-black/30 sm:hidden"
+      >
+        <Plus size={32} strokeWidth={3} />
+      </button>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <StatPill label="Dreams" value={`${filtered.length}`} accent />
@@ -236,6 +296,8 @@ export default function WishlistPage() {
             const pct = item.amount > 0 ? Math.min(100, Math.round((item.savedSoFar / item.amount) * 100)) : 0;
             const motivation = buildMotivation(item);
             const expanded = expandedId === item._id;
+            const status = item.status ?? (pct >= 100 ? "ready" : "planned");
+            const priority = item.priority ?? "medium";
 
             return (
               <motion.li
@@ -256,6 +318,23 @@ export default function WishlistPage() {
                         <p className="text-[10px] font-bold text-text-light uppercase tracking-wide">
                           {cat.label} · {formatMonthLabel(item.targetMonth)}
                         </p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span className="rounded-full bg-primary/15 px-2 py-1 text-[9px] font-black uppercase text-primary">
+                            {STATUS_LABELS[status]}
+                          </span>
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-1 text-[9px] font-black uppercase",
+                              priority === "high"
+                                ? "bg-red-500/10 text-red-500"
+                                : priority === "low"
+                                  ? "bg-text-light/10 text-text-light"
+                                  : "bg-accent/20 text-accent-dark"
+                            )}
+                          >
+                            {PRIORITY_LABELS[priority]}
+                          </span>
+                        </div>
                       </div>
                       <span className="text-xs font-black text-primary shrink-0">
                         {pct}%
@@ -287,6 +366,27 @@ export default function WishlistPage() {
                 <p className="mt-2 text-[11px] font-bold text-text-light italic leading-relaxed">
                   &ldquo;{item.genZComment || "No cap — this one's worth the grind."}&rdquo;
                 </p>
+
+                {(item.notes || item.purchaseUrl) && (
+                  <div className="mt-3 space-y-2 rounded-2xl bg-black/5 p-3 dark:bg-white/5">
+                    {item.notes && (
+                      <p className="flex items-start gap-2 text-[11px] font-bold text-text-light">
+                        <StickyNote size={13} className="mt-0.5 shrink-0" />
+                        <span>{item.notes}</span>
+                      </p>
+                    )}
+                    {item.purchaseUrl && (
+                      <a
+                        href={item.purchaseUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase text-primary hover:underline"
+                      >
+                        View item <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 <p className="mt-2 text-[10px] font-bold text-accent-dark bg-accent/10 px-3 py-2 rounded-xl">
                   {motivation}
@@ -328,6 +428,25 @@ export default function WishlistPage() {
                       >
                         Stash
                       </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {(Object.keys(STATUS_LABELS) as Array<NonNullable<WishlistItem["status"]>>).map(
+                        (nextStatus) => (
+                          <button
+                            key={nextStatus}
+                            type="button"
+                            onClick={() => handleStatusChange(item, nextStatus)}
+                            className={cn(
+                              "rounded-xl px-2 py-2 text-[10px] font-black uppercase",
+                              status === nextStatus
+                                ? "bg-vibe-purple text-white"
+                                : "bg-black/5 text-text-light hover:text-text-main dark:bg-white/5"
+                            )}
+                          >
+                            {STATUS_LABELS[nextStatus]}
+                          </button>
+                        )
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button

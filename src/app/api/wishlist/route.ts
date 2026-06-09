@@ -21,8 +21,19 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, categoryType, amount, monthlySave, targetMonth, genZComment, savedSoFar } =
-      body;
+    const {
+      name,
+      categoryType,
+      amount,
+      monthlySave,
+      targetMonth,
+      genZComment,
+      savedSoFar,
+      priority,
+      status,
+      purchaseUrl,
+      notes,
+    } = body;
 
     if (!name?.trim() || !categoryType || amount === undefined || !targetMonth) {
       return NextResponse.json(
@@ -49,6 +60,12 @@ export async function POST(req: Request) {
       targetMonth: String(targetMonth),
       genZComment: String(genZComment ?? "").trim(),
       savedSoFar: Number(savedSoFar ?? 0),
+      priority: ["low", "medium", "high"].includes(priority) ? priority : "medium",
+      status: ["planned", "saving", "ready", "purchased"].includes(status)
+        ? status
+        : "planned",
+      purchaseUrl: String(purchaseUrl ?? "").trim(),
+      notes: String(notes ?? "").trim(),
     });
 
     return NextResponse.json({ success: true, item, source }, { status: 201 });

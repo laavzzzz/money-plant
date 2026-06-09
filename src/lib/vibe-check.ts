@@ -11,13 +11,15 @@ export const DEMO_PROFILE = {
 };
 
 export const APP_ROUTES = [
-  { path: "/dashboard", label: "Home", description: "Overview, plant, savings, charts, quick actions" },
-  { path: "/transactions", label: "Transactions", description: "View and add income/expense transactions" },
-  { path: "/garden", label: "Garden", description: "Plant growth, water plant, achievements" },
-  { path: "/wishlist", label: "Wishlist", description: "Monthly wishlist items, savings targets, Gen-Z goals" },
-  { path: "/leaderboard", label: "Ranks", description: "Leaderboard and aura rankings" },
-  { path: "/profile", label: "Profile", description: "Character sheet, settings, linked accounts" },
-  { path: "/analytics", label: "Analytics", description: "Spending breakdown and trends" },
+  { path: "/dashboard", label: "Dashboard", description: "Overview, plant, savings, charts, and quick actions" },
+  { path: "/dashboard/accounts", label: "Accounts", description: "Linked accounts and account-level finance summary" },
+  { path: "/dashboard/transactions", label: "Transactions", description: "View and add income or expense transactions" },
+  { path: "/dashboard/analytics", label: "Analytics", description: "Spending breakdown, category trends, and insights" },
+  { path: "/dashboard/goals", label: "Goals", description: "Savings goals, progress, and priorities" },
+  { path: "/dashboard/garden", label: "Garden", description: "Plant growth, streaks, and achievements" },
+  { path: "/dashboard/wishlist", label: "Dream Vault", description: "Wishlist items, saving targets, and purchase planning" },
+  { path: "/dashboard/leaderboard", label: "Leaderboard", description: "Leaderboard, aura points, and rankings" },
+  { path: "/dashboard/profile", label: "Profile", description: "Profile stats, settings, and linked account details" },
 ] as const;
 
 export type FinanceSnapshot = {

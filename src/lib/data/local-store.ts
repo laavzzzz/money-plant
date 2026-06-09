@@ -36,6 +36,10 @@ export type StoreWishlistItem = {
   savedSoFar: number;
   targetMonth: string;
   genZComment: string;
+  priority?: "low" | "medium" | "high";
+  status?: "planned" | "saving" | "ready" | "purchased";
+  purchaseUrl?: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -195,6 +199,10 @@ const SEED_WISHLIST: StoreWishlistItem[] = [
     savedSoFar: 18000,
     targetMonth: monthOffset(2),
     genZComment: "Ranked nights with the squad — no lag, no L.",
+    priority: "high",
+    status: "saving",
+    purchaseUrl: "",
+    notes: "Compare bundle prices before buying.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -207,6 +215,10 @@ const SEED_WISHLIST: StoreWishlistItem[] = [
     savedSoFar: 3000,
     targetMonth: monthOffset(1),
     genZComment: "Fall fit check needs to eat.",
+    priority: "medium",
+    status: "saving",
+    purchaseUrl: "",
+    notes: "Check size availability and sale timing.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -219,6 +231,10 @@ const SEED_WISHLIST: StoreWishlistItem[] = [
     savedSoFar: 2000,
     targetMonth: monthOffset(0),
     genZComment: "AI co-pilot for assignments and side hustles.",
+    priority: "high",
+    status: "ready",
+    purchaseUrl: "",
+    notes: "Monthly subscription. Review before renewal.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -231,6 +247,10 @@ const SEED_WISHLIST: StoreWishlistItem[] = [
     savedSoFar: 24000,
     targetMonth: monthOffset(5),
     genZComment: "Event season — walk in, own the room.",
+    priority: "low",
+    status: "planned",
+    purchaseUrl: "",
+    notes: "Buy only after core savings goals are on track.",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -274,6 +294,10 @@ export async function updateLocalWishlistItem(
       | "savedSoFar"
       | "targetMonth"
       | "genZComment"
+      | "priority"
+      | "status"
+      | "purchaseUrl"
+      | "notes"
     >
   >
 ): Promise<StoreWishlistItem | null> {

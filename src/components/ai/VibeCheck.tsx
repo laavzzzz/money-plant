@@ -27,18 +27,25 @@ interface ChatMessage {
 }
 
 const HIDDEN_PATHS = ["/", "/login"];
+const withDashboardPath = (href: string) => `/dashboard${href}`;
 
 const QUICK_PROMPTS: Array<{
   label: string;
   query?: string;
   href?: string;
 }> = [
-  { label: "My spending", query: "Break down my spending by category and tell me my biggest vibe killer." },
+  { label: "Spending Vibe", query: "Analyze my spending. How much am I dropping on 'Subscriptions' and 'Food' specifically?" },
   { label: "Safe to spend", query: "How much can I safely spend right now based on my income and expenses?" },
-  { label: "My profile", query: "Summarize my profile stats, aura, rank, and plant stage." },
+  { label: "Income Mix", query: "What is my income split between Salary and Freelance/Side-hustles?" },
+  { label: "Manifest Goal", query: "How close am I to my Dream Vault goals? Give me a timeline based on my current streak." },
+  { label: "7-day plan", query: "Make me a practical 7-day saving plan from my current money data." },
+  { label: "Can I buy?", query: "Can I buy something worth ₹2,000 right now? Explain the tradeoff." },
   { label: "Add expense", href: "/transactions" },
+  { label: "Analytics", href: "/analytics" },
+  { label: "Goals", href: "/goals" },
   { label: "Garden", href: "/garden" },
-  { label: "Wishlist", href: "/wishlist" },
+  { label: "Dream Vault", href: "/wishlist" },
+  { label: "Leaderboard", href: "/leaderboard" },
 ];
 
 export default function VibeCheck() {
@@ -52,13 +59,13 @@ export default function VibeCheck() {
         id: "initial",
         role: "assistant",
         content:
-          "Yo! I'm VibeCheck — your MoneyPlant AI. I don't see any transactions yet. Head to History (/transactions) to log income or spending, then ask me anything about your bread! 🌿",
+          "Hi, I'm VibeCheck AI, your MoneyPlant assistant. I do not see any transactions yet. Open Transactions to log income or spending, then ask me anything about your money.",
       };
     }
     return {
       id: "initial",
       role: "assistant",
-      content: `Hey ${finance.profile.name.split(" ")[0]}! I'm synced with your garden — ₹${finance.savings.toLocaleString("en-IN")} net, ${finance.plantStage.name}, ${finance.streak}-day streak. Ask about spending, your profile, or where to go in the app! 🌿`,
+      content: `Hi ${finance.profile.name.split(" ")[0]}, VibeCheck AI is synced with your data: ₹${finance.savings.toLocaleString("en-IN")} net savings and a ${finance.streak}-day streak. Ask about spending, goals, analytics, or where to go next.`,
     };
   }, [finance.transactionCount, finance.profile.name, finance.savings, finance.plantStage.name, finance.streak]);
 
@@ -96,7 +103,11 @@ export default function VibeCheck() {
   useEffect(() => {
     const onOpen = () => setIsOpen(true);
     window.addEventListener("vibecheck:open", onOpen);
-    return () => window.removeEventListener("vibecheck:open", onOpen);
+    window.addEventListener("vibecheck:toggle", onOpen);
+    return () => {
+      window.removeEventListener("vibecheck:open", onOpen);
+      window.removeEventListener("vibecheck:toggle", onOpen);
+    };
   }, []);
 
   const sendToAI = async (text: string) => {
@@ -138,7 +149,8 @@ export default function VibeCheck() {
       const contentType = response.headers.get("content-type") ?? "";
 
       if (!response.ok) {
-        let errMsg = "VibeCheck couldn't reach the AI. Try again? 🔌";
+        let errMsg =
+          "VibeCheck AI could not respond right now. Please check the API setup and try again.";
         if (contentType.includes("application/json")) {
           const err = await response.json();
           errMsg = err.message ?? err.error ?? errMsg;
@@ -168,7 +180,9 @@ export default function VibeCheck() {
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       const errText =
-        err instanceof Error ? err.message : "Connection failed. Try again! 🔌";
+        err instanceof Error
+          ? err.message
+          : "Connection failed. Please try again in a moment.";
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last?.role === "assistant" && !last.content) {
@@ -195,7 +209,7 @@ export default function VibeCheck() {
   const handleQuickPrompt = (item: (typeof QUICK_PROMPTS)[number]) => {
     if (item.href) {
       setIsOpen(false);
-      router.push(item.href);
+      router.push(withDashboardPath(item.href));
       return;
     }
     if (item.query) {
@@ -218,13 +232,13 @@ export default function VibeCheck() {
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-28 right-6 z-[100] w-16 h-16 rounded-full shadow-2xl",
+          "fixed bottom-28 right-4 z-[100] flex h-14 w-14 items-center justify-center rounded-full shadow-2xl sm:right-6 sm:h-16 sm:w-16 lg:bottom-8",
           "bg-gradient-to-tr from-[#FFD700] via-[#FACC15] to-[#EAB308]",
-          "flex items-center justify-center text-black border-2 border-white/40",
+          "text-black border-2 border-white/40",
           isOpen && "hidden"
         )}
       >
-        <Sparkles size={30} className="animate-pulse" />
+        <Sparkles size={28} className="animate-pulse" />
       </motion.button>
 
       <AnimatePresence>
@@ -234,14 +248,14 @@ export default function VibeCheck() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-24 right-6 z-[101] w-[92vw] md:w-[420px] h-[620px] glass-panel flex flex-col shadow-[0_32px_64px_rgba(0,0,0,0.5)] overflow-hidden border-white/20 ring-1 ring-white/10"
+            className="fixed inset-x-3 bottom-28 z-[101] flex h-[min(620px,calc(100dvh-9rem))] flex-col overflow-hidden rounded-[28px] border-white/20 shadow-[0_32px_64px_rgba(0,0,0,0.35)] ring-1 ring-white/10 glass-panel sm:inset-x-auto sm:right-6 sm:w-[420px] lg:bottom-8"
           >
-            <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-5">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 sm:h-12 sm:w-12">
                   <MessageCircle size={26} className="text-primary" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-black text-base tracking-tight text-text-main">VibeCheck AI</h3>
                   <div className="flex items-center gap-1.5">
                     <span
@@ -250,38 +264,38 @@ export default function VibeCheck() {
                         finance.loading ? "bg-yellow-400 animate-pulse" : "bg-green-500"
                       )}
                     />
-                    <span className="text-[10px] font-black opacity-60 uppercase tracking-widest">
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
                       {finance.loading ? "Syncing data…" : "Live data synced"}
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex shrink-0 items-center gap-1">
                 <button
                   onClick={clearChat}
                   aria-label="Clear chat"
-                  className="p-2 hover:bg-white/10 rounded-xl transition-all text-text-main/40 hover:text-vibe-pink"
+                  className="rounded-xl p-2 text-text-main/40 transition-all hover:bg-white/10 hover:text-danger"
                 >
                   <Trash2 size={18} />
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
                   aria-label="Close chat"
-                  className="p-2 hover:bg-white/10 rounded-xl transition-all"
+                  className="rounded-xl p-2 transition-all hover:bg-white/10"
                 >
                   <ChevronDown size={24} className="text-text-main" />
                 </button>
               </div>
             </div>
 
-            <div className="px-4 pt-3 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
+            <div className="no-scrollbar flex shrink-0 gap-2 overflow-x-auto px-4 pt-3">
               {QUICK_PROMPTS.map((item) => (
                 <button
                   key={item.label}
                   type="button"
                   disabled={isLoading}
                   onClick={() => handleQuickPrompt(item)}
-                  className="shrink-0 text-[10px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full bg-white/10 border border-white/10 hover:bg-primary/20 transition-colors disabled:opacity-40"
+                  className="shrink-0 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-colors hover:bg-primary/20 disabled:opacity-40"
                 >
                   {item.label}
                 </button>
@@ -290,7 +304,7 @@ export default function VibeCheck() {
 
             <div
               ref={scrollAreaRef}
-              className="flex-1 overflow-y-auto p-5 space-y-6 bg-black/20 no-scrollbar min-h-0"
+              className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto bg-black/10 p-4 sm:space-y-6 sm:p-5 dark:bg-black/20"
             >
               {messages.map((msg) => (
                 <motion.div
@@ -302,7 +316,7 @@ export default function VibeCheck() {
                 >
                   <div
                     className={cn(
-                      "max-w-[88%] p-4 rounded-[22px] text-sm font-bold leading-relaxed shadow-xl whitespace-pre-wrap",
+                      "max-w-[88%] whitespace-pre-wrap rounded-[22px] p-4 text-sm font-bold leading-relaxed shadow-xl",
                       msg.role === "user"
                         ? "bg-gradient-to-br from-primary to-vibe-purple text-white rounded-tr-none"
                         : "bg-white/5 border border-white/10 text-text-main rounded-tl-none"
@@ -316,36 +330,36 @@ export default function VibeCheck() {
                 </motion.div>
               ))}
               {isLoading && (
-                <div className="flex items-center gap-2 p-3 bg-white/5 rounded-full w-fit animate-pulse border border-white/5">
+                <div className="flex w-fit animate-pulse items-center gap-2 rounded-full border border-white/5 bg-white/5 p-3">
                   <Zap size={14} className="text-yellow-400 fill-yellow-400" />
-                  <span className="text-[10px] font-bold uppercase opacity-50">Reading your stacks…</span>
+                  <span className="text-[10px] font-bold uppercase opacity-50">Reading your money data…</span>
                 </div>
               )}
             </div>
 
             <form
               onSubmit={handleSendMessage}
-              className="p-5 bg-white/5 border-t border-white/10 backdrop-blur-2xl shrink-0"
+              className="shrink-0 border-t border-white/10 bg-white/5 p-4 backdrop-blur-2xl sm:p-5"
             >
               <div className="relative flex items-center">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   aria-label="Message VibeCheck"
-                  placeholder="Ask about spending, profile, or where to go…"
+                  placeholder="Ask about spending, goals, analytics..."
                   disabled={isLoading}
-                  className="w-full bg-black/40 border border-white/10 rounded-[22px] py-4 pl-6 pr-14 text-sm font-bold text-white focus:outline-none focus:ring-2 ring-primary/50 disabled:opacity-50 placeholder:text-white/20"
+                  className="w-full rounded-[22px] border border-white/10 bg-black/40 py-4 pl-5 pr-14 text-sm font-bold text-white ring-primary/50 placeholder:text-white/30 focus:outline-none focus:ring-2 disabled:opacity-50"
                 />
                 <button
                   type="submit"
                   aria-label="Send"
                   disabled={!input.trim() || isLoading}
-                  className="absolute right-2.5 p-2.5 rounded-2xl bg-primary text-white hover:scale-110 active:scale-90 disabled:opacity-20 transition-all"
+                  className="absolute right-2.5 rounded-2xl bg-primary p-2.5 text-white transition-all hover:scale-110 active:scale-90 disabled:opacity-20"
                 >
                   <Send size={22} />
                 </button>
               </div>
-              <div className="flex justify-center mt-3 gap-4 opacity-20 pointer-events-none">
+              <div className="pointer-events-none mt-3 flex justify-center gap-4 opacity-30">
                 <div className="flex items-center gap-1">
                   <TrendingUp size={10} />
                   <span className="text-[8px] font-black uppercase">GPT-4o mini</span>

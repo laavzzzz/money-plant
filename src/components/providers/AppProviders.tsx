@@ -3,14 +3,14 @@
 import React from "react";
 import { FinanceProvider } from "./FinanceProvider";
 import { TransactionModalProvider } from "./TransactionModalProvider";
-import ChatWidget from "@/components/ai/ChatWidget";
+import VibeCheck from "@/components/ai/VibeCheck";
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <FinanceProvider>
       <TransactionModalProvider>
         {children}
-        <ChatWidget />
+        <VibeCheck />
       </TransactionModalProvider>
     </FinanceProvider>
   );

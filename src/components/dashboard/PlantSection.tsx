@@ -3,6 +3,15 @@
 import GlassCard from "../ui/GlassCard";
 import { motion } from "framer-motion";
 import ProgressBar from "../goals/ProgressBars";
+import {
+  Apple,
+  CircleDot,
+  Flower2,
+  Leaf,
+  LucideIcon,
+  Sprout,
+  TreePine,
+} from "lucide-react";
 
 /* 🧠 TYPES */
 export type PlantStage = {
@@ -18,40 +27,80 @@ type PlantProps = {
   reducedMotion?: boolean;
 };
 
-/* 🌿 EMOJI + STYLE SYSTEM */
-function getPlantConfig(growth: number) {
-  if (growth <= 20)
+type PlantConfig = {
+  Icon: LucideIcon;
+  glow: string;
+  aura: string;
+  iconBg: string;
+  iconColor: string;
+};
+
+/* 🌿 STAGE ICON + STYLE SYSTEM */
+function getPlantConfig(stage?: PlantStage, growth = 0): PlantConfig {
+  const level =
+    stage?.level ??
+    (growth >= 95 ? 7 : growth >= 75 ? 6 : growth >= 50 ? 5 : growth >= 30 ? 4 : growth >= 15 ? 3 : growth >= 5 ? 2 : 1);
+
+  if (level === 1)
     return {
-      emoji: "🌱",
+      Icon: CircleDot,
       glow: "from-green-100/40 to-lime-100/30",
       aura: "bg-green-200",
+      iconBg: "bg-lime-100 dark:bg-lime-400/10",
+      iconColor: "text-lime-700 dark:text-lime-300",
     };
 
-  if (growth <= 45)
+  if (level === 2)
     return {
-      emoji: "🌿",
+      Icon: Sprout,
       glow: "from-emerald-200/40 to-green-100/30",
       aura: "bg-emerald-400",
+      iconBg: "bg-emerald-100 dark:bg-emerald-400/10",
+      iconColor: "text-emerald-700 dark:text-emerald-300",
     };
 
-  if (growth <= 70)
+  if (level === 3)
     return {
-      emoji: "🪴",
+      Icon: Leaf,
       glow: "from-green-300/40 to-teal-100/30",
       aura: "bg-teal-300",
+      iconBg: "bg-teal-100 dark:bg-teal-400/10",
+      iconColor: "text-teal-700 dark:text-teal-300",
     };
 
-  if (growth <= 90)
+  if (level === 4)
     return {
-      emoji: "🌳",
+      Icon: Sprout,
+      glow: "from-green-300/40 to-cyan-100/30",
+      aura: "bg-green-300",
+      iconBg: "bg-green-100 dark:bg-green-400/10",
+      iconColor: "text-green-700 dark:text-green-300",
+    };
+
+  if (level === 5)
+    return {
+      Icon: TreePine,
       glow: "from-green-400/40 to-yellow-100/30",
       aura: "bg-green-300",
+      iconBg: "bg-green-100 dark:bg-green-400/10",
+      iconColor: "text-green-800 dark:text-green-300",
+    };
+
+  if (level === 6)
+    return {
+      Icon: Flower2,
+      glow: "from-pink-200/40 to-yellow-100/30",
+      aura: "bg-pink-200",
+      iconBg: "bg-pink-100 dark:bg-pink-400/10",
+      iconColor: "text-pink-700 dark:text-pink-300",
     };
 
   return {
-    emoji: "🌸",
-    glow: "from-pink-200/40 to-yellow-100/30",
-    aura: "bg-pink-200",
+    Icon: Apple,
+    glow: "from-rose-200/40 to-amber-100/30",
+    aura: "bg-rose-200",
+    iconBg: "bg-rose-100 dark:bg-rose-400/10",
+    iconColor: "text-rose-700 dark:text-rose-300",
   };
 }
 
@@ -64,7 +113,8 @@ export default function PlantSection({
 }: PlantProps) {
   const safeGrowth = Math.max(0, Math.min(growth, 100));
 
-  const plant = getPlantConfig(safeGrowth);
+  const plant = getPlantConfig(stage, safeGrowth);
+  const StageIcon = plant.Icon;
 
   return (
     <GlassCard
@@ -98,9 +148,9 @@ export default function PlantSection({
               ? { duration: 0 }
               : { repeat: Infinity, duration: 3, ease: "easeInOut" }
           }
-          className="text-6xl"
+          className={`mx-auto flex h-24 w-24 items-center justify-center rounded-[28px] border border-white/40 shadow-2xl ${plant.iconBg}`}
         >
-          {plant.emoji}
+          <StageIcon size={54} strokeWidth={1.8} className={plant.iconColor} />
         </motion.div>
 
         {/* 💬 STATUS */}

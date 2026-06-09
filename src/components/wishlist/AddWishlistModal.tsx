@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles } from "lucide-react";
+import { X, Sparkles, Link as LinkIcon, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   WISHLIST_CATEGORIES,
@@ -15,9 +15,14 @@ export type WishlistFormValues = {
   categoryType: string;
   amount: string;
   monthlySave: string;
+  savedSoFar: string;
   targetMode: "month" | "months";
   targetMonth: string;
   targetMonthsCount: string;
+  priority: "low" | "medium" | "high";
+  status: "planned" | "saving" | "ready" | "purchased";
+  purchaseUrl: string;
+  notes: string;
   genZComment: string;
 };
 
@@ -26,11 +31,29 @@ const emptyForm = (): WishlistFormValues => ({
   categoryType: "gaming",
   amount: "",
   monthlySave: "",
+  savedSoFar: "0",
   targetMode: "month",
   targetMonth: monthKey(),
   targetMonthsCount: "3",
+  priority: "medium",
+  status: "planned",
+  purchaseUrl: "",
+  notes: "",
   genZComment: "",
 });
+
+const PRIORITIES: Array<{ value: WishlistFormValues["priority"]; label: string }> = [
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+];
+
+const STATUSES: Array<{ value: WishlistFormValues["status"]; label: string }> = [
+  { value: "planned", label: "Planned" },
+  { value: "saving", label: "Saving" },
+  { value: "ready", label: "Ready" },
+  { value: "purchased", label: "Purchased" },
+];
 
 type Props = {
   open: boolean;
@@ -87,6 +110,10 @@ export default function AddWishlistModal({
     }
     if (!form.monthlySave || Number(form.monthlySave) < 0) {
       setError("Set how much you'll save each month 🌱");
+      return;
+    }
+    if (Number(form.savedSoFar) < 0 || Number(form.savedSoFar) > Number(form.amount)) {
+      setError("Saved so far should be between ₹0 and the total price");
       return;
     }
     try {
@@ -196,6 +223,65 @@ export default function AddWishlistModal({
 
               <div>
                 <label className="text-[10px] font-black uppercase text-text-light tracking-widest">
+                  Already saved (₹)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.savedSoFar}
+                  onChange={(e) => setForm((f) => ({ ...f, savedSoFar: e.target.value }))}
+                  className="mt-1 w-full p-4 rounded-2xl bg-black/5 dark:bg-white/5 font-bold outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-text-light tracking-widest">
+                    Priority
+                  </label>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {PRIORITIES.map((priority) => (
+                      <button
+                        key={priority.value}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, priority: priority.value }))}
+                        className={cn(
+                          "rounded-xl px-2 py-2 text-[10px] font-black uppercase",
+                          form.priority === priority.value
+                            ? "bg-primary text-white"
+                            : "bg-black/5 dark:bg-white/5 text-text-light"
+                        )}
+                      >
+                        {priority.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-text-light tracking-widest">
+                    Status
+                  </label>
+                  <select
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        status: e.target.value as WishlistFormValues["status"],
+                      }))
+                    }
+                    className="mt-2 w-full p-3 rounded-2xl bg-black/5 dark:bg-white/5 font-bold outline-none"
+                  >
+                    {STATUSES.map((status) => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-text-light tracking-widest">
                   Target timeline
                 </label>
                 <div className="flex gap-2 mt-2">
@@ -249,7 +335,45 @@ export default function AddWishlistModal({
 
               <div>
                 <label className="text-[10px] font-black uppercase text-text-light tracking-widest">
-                  Gen-Z vibe comment
+                  Purchase link
+                </label>
+                <div className="relative mt-1">
+                  <LinkIcon
+                    size={16}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-text-light"
+                  />
+                  <input
+                    value={form.purchaseUrl}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, purchaseUrl: e.target.value }))
+                    }
+                    placeholder="https://store.example/item"
+                    className="w-full p-4 pl-11 rounded-2xl bg-black/5 dark:bg-white/5 font-bold text-sm outline-none focus:ring-2 ring-primary/30"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-text-light tracking-widest">
+                  Notes
+                </label>
+                <div className="relative mt-1">
+                  <StickyNote size={16} className="absolute left-4 top-4 text-text-light" />
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, notes: e.target.value }))
+                    }
+                    rows={3}
+                    placeholder="Size, color, store, warranty, discount notes..."
+                    className="w-full p-4 pl-11 rounded-2xl bg-black/5 dark:bg-white/5 font-bold text-sm outline-none resize-none focus:ring-2 ring-primary/30"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase text-text-light tracking-widest">
+                  Motivation comment
                 </label>
                 <textarea
                   value={form.genZComment}

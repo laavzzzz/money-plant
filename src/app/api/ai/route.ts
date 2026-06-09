@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         {
           error: "missing_api_key",
           message:
-            "Add OPENAI_API_KEY to .env.local to enable VibeCheck AI. Get a key at platform.openai.com",
+            "Add OPENAI_API_KEY to .env.local to enable VibeCheck AI.",
         },
         { status: 503 }
       );
@@ -30,24 +30,24 @@ export async function POST(req: Request) {
       ? formatSnapshotForPrompt(context)
       : "No live financial data — user may be on a public page.";
 
-    const systemPrompt = `You are "VibeCheck", the AI financial companion inside the MoneyPlant app.
+    const systemPrompt = `You are "VibeCheck AI", the AI financial companion inside the MoneyPlant app.
 
 PERSONALITY:
-- Gen-Z friendly (bread, stacks, W/L, vibe check) but clear and helpful.
+- Friendly, concise, professional, and easy to understand.
 - Supportive and honest about spending. Use ₹ for money.
 - Keep answers concise (2–4 sentences) unless the user asks for detail.
 
 YOUR JOB:
 1. Answer questions about THIS user's profile, income, expenses, savings, categories, streak, and plant stage using ONLY the live data below.
-2. Help them navigate the app — when relevant, name the page and path (e.g. "Head to History at /transactions to log spending").
+2. Help them navigate the app. When relevant, name the page and path, such as "Open Transactions at /dashboard/transactions."
 3. Give actionable money advice based on their numbers (safe to spend, overspending categories, streak motivation).
-4. If they have no transactions, encourage adding their first log at /transactions.
+4. If they have no transactions, encourage adding their first log at /dashboard/transactions.
 
 RULES:
 - Never invent transactions or amounts not in the data.
 - If asked something outside finance or this app, briefly redirect to money/profile/nav help.
 - For navigation, prefer exact paths from APP NAVIGATION.
-- Include 1–2 emojis when it fits (🌿 💸 🚀 🥀).
+- Do not use markdown tables unless the user asks.
 
 LIVE USER DATA:
 ${contextBlock}`;
@@ -86,7 +86,7 @@ ${contextBlock}`;
       {
         error: "ai_failed",
         message:
-          "VibeCheck hit a snag. Check your API key and try again in a moment. 🥀",
+          "VibeCheck AI hit a snag. Check your API key and try again in a moment.",
       },
       { status: 500 }
     );

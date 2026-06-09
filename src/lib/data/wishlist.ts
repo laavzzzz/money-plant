@@ -26,6 +26,10 @@ export async function createWishlistItem(input: {
   monthlySave: number;
   targetMonth: string;
   genZComment: string;
+  priority?: "low" | "medium" | "high";
+  status?: "planned" | "saving" | "ready" | "purchased";
+  purchaseUrl?: string;
+  notes?: string;
   savedSoFar?: number;
 }): Promise<{ item: StoreWishlistItem; source: "local" }> {
   const item = await addLocalWishlistItem(input);
@@ -42,6 +46,10 @@ export async function patchWishlistItem(
     savedSoFar: number;
     targetMonth: string;
     genZComment: string;
+    priority: "low" | "medium" | "high";
+    status: "planned" | "saving" | "ready" | "purchased";
+    purchaseUrl: string;
+    notes: string;
   }>
 ): Promise<{ item: StoreWishlistItem | null; source: "local" }> {
   const item = await updateLocalWishlistItem(id, patch);

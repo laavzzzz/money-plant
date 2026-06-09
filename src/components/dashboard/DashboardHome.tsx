@@ -1,19 +1,18 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, Variants, useReducedMotion } from "framer-motion";
-import { Plus, Target, Sparkles, Zap, ZapOff, Flame, Wallet, PiggyBank } from "lucide-react";
+import { Plus, Target, Sparkles, Flame, Wallet, PiggyBank } from "lucide-react";
 import HeroCard from "@/components/dashboard/HeroCard";
 import PlantSection, { PlantStage } from "@/components/dashboard/PlantSection";
 import SafeToSpendCard from "@/components/dashboard/SafeToSpendCard";
 import StreakCard from "@/components/dashboard/StreakCard";
 import OverviewChart from "@/components/dashboard/OverviewChart";
-import QuickActions from "@/components/dashboard/QuickActions";
-import ActionButtons from "@/components/dashboard/ActionButtons";
 import { useTransactionModal } from "@/components/providers/TransactionModalProvider";
 import LeaderboardList from "@/components/leaderboard/LeaderboardList";
 import InsightCard from "@/components/analytics/AIInsightCard";
+import Button from "@/components/ui/Button";
 import { useFinanceContext } from "@/components/providers/FinanceProvider";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { generateAIInsight } from "@/lib/ai";
@@ -48,39 +47,21 @@ function DreamVault() {
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-accent/20 rounded-xl flex items-center justify-center text-accent shrink-0">
-              🎸
+              🎯
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-sm truncate">Fender Strat</p>
+              <p className="font-bold text-sm truncate">Active Goal</p>
               <p className="text-[10px] opacity-50 uppercase font-black tracking-widest">
-                ₹1,02,000 goal
+                Set your first milestone
               </p>
             </div>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-xs font-bold text-primary">85%</p>
+            <p className="text-xs font-bold text-primary">0%</p>
             <div className="w-12 h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
-              <div className="h-full bg-primary w-[85%]" />
+              <div className="h-full bg-primary w-[0%]" />
             </div>
           </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push("/wishlist")}
-          className="w-full p-3 sm:p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between text-left hover:bg-white/10 transition-colors gap-2"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-secondary/20 rounded-xl flex items-center justify-center text-secondary shrink-0">
-              🧥
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold text-sm truncate">Zara Jacket</p>
-              <p className="text-[10px] opacity-50 uppercase font-black tracking-widest">
-                Open wishlist
-              </p>
-            </div>
-          </div>
-          <Target size={16} className="text-text-light shrink-0" />
         </button>
       </div>
     </div>
@@ -160,16 +141,16 @@ export default function DashboardHome() {
     streak,
     plantStage,
     plantStatus,
+    profile,
     refreshTransactions,
   } = useFinanceContext();
   const { data: leaderboard, loading: leaderboardLoading } = useLeaderboard();
+  const { openAdd } = useTransactionModal();
 
   // 1. Detect system preference
   const systemReducedMotion = useReducedMotion();
-  // 2. Manual toggle state
-  const [manualReduce, setManualReduce] = useState(false);
   
-  const reduced = systemReducedMotion || manualReduce;
+  const reduced = Boolean(systemReducedMotion);
 
   // 3. Memoized variants that adapt to the motion preference
   const variants = useMemo(() => {
@@ -239,7 +220,7 @@ export default function DashboardHome() {
         <motion.div variants={variants.item} initial="hidden" animate="show">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl sm:text-4xl font-black text-text-main tracking-tight">
-              Hi, Ananya! 👋
+              Hi, {profile?.name?.split(" ")[0] || "User"}! 👋
             </h1>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-300 rounded-full text-xs font-black uppercase tracking-wider">
               <Flame className="w-4 h-4 fill-orange-500 text-orange-500 animate-pulse" />
@@ -258,6 +239,17 @@ export default function DashboardHome() {
           animate="show"
           className="flex flex-wrap items-center gap-4 w-full lg:w-auto"
         >
+          {/* ⚡️ PRIMARY ACTION - SINGLE BIG GREEN BUTTON */}
+          <Button
+            onClick={() => openAdd()}
+            variant="secondary"
+            size="md"
+            leftIcon={<Plus size={18} />}
+            className="w-full sm:w-auto font-black shadow-lg shadow-success/10 transition-all hover:scale-[1.02] active:scale-95"
+          >
+            Add Transaction
+          </Button>
+
           <div className="flex-1 sm:flex-initial glass-panel p-4 min-w-[160px] flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
               <Wallet size={18} />
@@ -278,13 +270,6 @@ export default function DashboardHome() {
             </div>
           </div>
 
-          <button
-            onClick={() => setManualReduce(!manualReduce)}
-            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-colors h-[58px]"
-          >
-            {reduced ? <ZapOff size={14} /> : <Zap size={14} />}
-            <span className="hidden sm:inline">{reduced ? "Motion Off" : "Motion On"}</span>
-          </button>
         </motion.div>
       </div>
 
@@ -302,9 +287,6 @@ export default function DashboardHome() {
           </motion.div>
           <motion.div variants={variants.item} layout="position" className="min-w-0">
             <OverviewChart transactions={transactions} />
-          </motion.div>
-          <motion.div variants={variants.item} layout="position" className="min-w-0">
-            <ActionButtons />
           </motion.div>
         </section>
 
@@ -334,9 +316,6 @@ export default function DashboardHome() {
           </motion.div>
           <motion.div variants={variants.item} layout="position" className="min-h-0 flex-1">
             <LeaderboardList users={leaderboard} loading={leaderboardLoading} />
-          </motion.div>
-          <motion.div variants={variants.item} layout="position">
-            <QuickActions />
           </motion.div>
         </aside>
       </motion.div>

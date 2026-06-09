@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   Home,
-  CreditCard,
   ArrowLeftRight,
   PieChart,
   Target,
@@ -19,12 +18,11 @@ import {
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: Home, href: "/dashboard" },
-  { label: "Accounts", icon: CreditCard, href: "/dashboard/accounts" },
   { label: "Transactions", icon: ArrowLeftRight, href: "/dashboard/transactions" },
   { label: "Analytics", icon: PieChart, href: "/dashboard/analytics" },
   { label: "Goals", icon: Target, href: "/dashboard/goals" },
   { label: "Garden", icon: Leaf, href: "/dashboard/garden" },
-  { label: "Wishlist", icon: Heart, href: "/dashboard/wishlist" },
+  { label: "Dream Vault", icon: Heart, href: "/dashboard/wishlist" },
   { label: "Leaderboard", icon: Trophy, href: "/dashboard/leaderboard" },
   { label: "Profile", icon: User, href: "/dashboard/profile" },
 ];
@@ -108,5 +106,4 @@ export default function Sidebar() {
       </div>
 
     </aside>
-  );
-}
+  )}

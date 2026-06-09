@@ -12,6 +12,13 @@ import {
   Car,
   Banknote,
   TrendingUp,
+  ShoppingBag,
+  Film,
+  Activity,
+  Home,
+  Heart,
+  Zap,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import GlassCard from "@/components/ui/GlassCard";
@@ -24,16 +31,45 @@ import type { Transaction } from "@/hooks/useTransactions";
 const CATEGORIES = ["All", "Income", "Expense"] as const;
 
 function iconForCategory(category: string, type: string) {
-  if (type === "income") return <Banknote className="text-green-500" />;
-  if (category.toLowerCase().includes("food") || category.includes("☕"))
+  const cat = category.toLowerCase().trim();
+  
+  if (type === "income") {
+    if (cat.includes("salary") || cat.includes("job") || cat.includes("paycheck")) 
+      return <Banknote className="text-green-500" />;
+    if (cat.includes("freelance") || cat.includes("gig") || cat.includes("project")) 
+      return <TrendingUp className="text-emerald-500" />;
+    if (cat.includes("gift") || cat.includes("bonus") || cat.includes("reward")) 
+      return <Heart className="text-pink-500" />;
+    if (cat.includes("dividend") || cat.includes("invest") || cat.includes("interest")) 
+      return <TrendingUp className="text-blue-500" />;
+    if (cat.includes("sale") || cat.includes("refund")) 
+      return <Zap className="text-yellow-500" />;
+    return <ArrowDownLeft className="text-green-500" />;
+  }
+
+  // Comprehensive Expense Category Mapping
+  if (cat.includes("food") || cat.includes("drink") || cat.includes("coffee") || cat.includes("☕") || cat.includes("dining") || cat.includes("restaurant"))
     return <Coffee className="text-orange-500" />;
-  if (category.toLowerCase().includes("transport") || category.includes("🚕"))
-    return <Car className="text-primary" />;
-  return type === "income" ? (
-    <ArrowDownLeft className="text-green-500" />
-  ) : (
-    <ArrowUpRight className="text-red-500" />
-  );
+  if (cat.includes("transport") || cat.includes("taxi") || cat.includes("fuel") || cat.includes("🚕") || cat.includes("car") || cat.includes("bus") || cat.includes("train"))
+    return <Car className="text-blue-400" />;
+  if (cat.includes("shopping") || cat.includes("clothes") || cat.includes("amazon") || cat.includes("🛍️") || cat.includes("grocery"))
+    return <ShoppingBag className="text-purple-500" />;
+  if (cat.includes("entertainment") || cat.includes("movie") || cat.includes("game") || cat.includes("netflix") || cat.includes("subscription"))
+    return <Film className="text-rose-500" />;
+  if (cat.includes("health") || cat.includes("gym") || cat.includes("medicine") || cat.includes("doctor") || cat.includes("fitness"))
+    return <Activity className="text-red-500" />;
+  if (cat.includes("home") || cat.includes("rent") || cat.includes("utilities") || cat.includes("electricity") || cat.includes("water") || cat.includes("maintenance"))
+    return <Home className="text-amber-600" />;
+  if (cat.includes("tech") || cat.includes("mobile") || cat.includes("gadget") || cat.includes("electronics"))
+    return <Smartphone className="text-slate-500" />;
+  if (cat.includes("education") || cat.includes("book") || cat.includes("course") || cat.includes("learning"))
+    return <TrendingUp className="text-cyan-500" />;
+  if (cat.includes("travel") || cat.includes("flight") || cat.includes("hotel") || cat.includes("vacation"))
+    return <Zap className="text-indigo-500" />;
+  if (cat.includes("insurance") || cat.includes("tax") || cat.includes("fee"))
+    return <Zap className="text-gray-500" />;
+
+  return <ArrowUpRight className="text-red-500" />;
 }
 
 export default function TransactionsPage() {
