@@ -1,14 +1,33 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, User, Trash2, ShieldAlert } from "lucide-react";
+import { LogOut, User, Trash2, ShieldAlert, Mail, Phone, Award } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { motion } from "framer-motion";
 import { useFinanceContext } from "@/components/providers/FinanceProvider";
 
+const getSavingsTitle = (savings: number, income: number) => {
+  if (income <= 0) return "🌱 Budget Rookie";
+  const percentage = (savings / income) * 100;
+  
+  if (percentage < 5) return "🌱 Budget Rookie";
+  if (percentage < 10) return "💸 Coin Collector";
+  if (percentage < 15) return "🌿 Cash Sprout";
+  if (percentage < 20) return "📈 Savings Explorer";
+  if (percentage < 30) return "💎 Money Mover";
+  if (percentage < 40) return "🚀 Wealth Builder";
+  if (percentage < 50) return "🏆 Finance Slayer";
+  if (percentage < 60) return "👑 Bag Secured";
+  if (percentage < 75) return "🔥 Wealth Wizard";
+  return "🌳 MoneyPlant Legend";
+};
+
+
 export default function ProfilePage() {
   const router = useRouter();
-  const { profile } = useFinanceContext();
+  const { profile, savings, income } = useFinanceContext();
+
+  const savingsTitle = getSavingsTitle(savings, income);
 
   const handleLogout = () => {
     const confirmed = window.confirm(
@@ -76,21 +95,46 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-panel p-6 sm:p-8 space-y-6"
+        className="glass-panel p-6 sm:p-8 space-y-8"
       >
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-text-main">Account Actions</h2>
-          <p className="text-sm text-text-light">Manage your current session and security settings.</p>
-        </div>
+        {/* User Identity Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 flex flex-col gap-3 min-w-0 overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Award size={20} className="text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Savings Rank</p>
+              <p className="font-bold text-lg text-text-main truncate">{savingsTitle}</p>
+            </div>
+          </div>
 
-        <div className="space-y-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start gap-3 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-              <ShieldAlert className="text-orange-500 shrink-0" size={20} />
-              <p className="text-sm text-text-light leading-relaxed">
-                Logging out will end your current session. You will need your phone number and verification to return to your garden.
+          <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 flex flex-col gap-3 min-w-0 overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Mail size={20} className="text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Email Address</p>
+              <p className="font-bold text-text-main truncate leading-tight" title={profile?.email || "Not provided"}>
+                {profile?.email || "Not provided"}
               </p>
             </div>
+          </div>
+
+          <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 flex flex-col gap-3 min-w-0 overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Phone size={20} className="text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Verified Phone</p>
+              <p className="font-bold text-text-main truncate">{profile?.phone || "Not linked"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-white/10 space-y-4">
+          <h3 className="text-sm font-black uppercase tracking-widest text-text-main">Session Management</h3>
+          <div className="flex flex-col gap-4">
             <Button
               onClick={handleLogout}
               leftIcon={<LogOut size={18} />}

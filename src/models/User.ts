@@ -7,11 +7,10 @@ export interface IUser extends Document {
   phone: string;
   isVerified: boolean;
   location?: string;
-  accountType: string;
   bio: string;
-  totalSaved: number;
   monthlyAverage: number;
   goalCompletion: string;
+  totalSaved: number;
   totalIncome: number;
   totalExpense: number;
   streak: number;
@@ -27,7 +26,6 @@ const UserSchema: Schema<IUser> = new Schema(
     phone: { type: String, required: true, unique: true, index: true },
     isVerified: { type: Boolean, default: false },
     location: { type: String },
-    accountType: { type: String, default: "Standard Saver" },
     bio: { type: String, default: "Building better money habits one plant at a time." },
     totalSaved: { type: Number, default: 0 },
     monthlyAverage: { type: Number, default: 0 },
