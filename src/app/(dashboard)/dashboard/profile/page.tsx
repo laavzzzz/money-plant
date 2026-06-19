@@ -1,491 +1,620 @@
+/**
+ * @fileoverview Enterprise Gamified User Profile Configuration Console
+ * @description High-performance profile portal featuring atomic input tracking, 
+ * secure local storage fallback engines, validation wrappers, and zero layout hydration lag.
+ */
+
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Camera, User, Shield, Zap, Award, Star, Edit3, MapPin, Mail, Phone, ShieldCheck } from "lucide-react";
-import { motion } from "framer-motion";
+import React, { useEffect, useRef, useState, useMemo, useCallback, memo } from "react";
+import { 
+  Camera, User, Shield, Zap, Award, Star, Edit3, MapPin, 
+  Mail, Phone, ShieldCheck, LogOut, Check, X, RefreshCw 
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+// ============================================================================
+// CORE SYSTEM UTILITIES
+// ============================================================================
+
+/**
+ * High-performance Tailwind Class Merger
+ */
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 const PROFILE_STORAGE_KEY = "moneyplant-profile";
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB Upload Guardrail
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  accountType: string;
+  joinedDate: string;
+  bio: string;
+  totalSaved: string;
+  monthlyAverage: string;
+  goalCompletion: string;
+  savingsRate: string;
+  globalAura: string;
+  achievements: string;
+  profilePic: string | null;
+}
+
+const DEFAULT_PROFILE: UserProfile = {
+  name: "Player One",
+  email: "player.one@moneyplant.app",
+  phone: "+91 98765 43210",
+  location: "Bengaluru, India",
+  accountType: "Premium Saver",
+  joinedDate: "June 2024",
+  bio: "Building better money habits one plant at a time.",
+  totalSaved: "124800",
+  monthlyAverage: "12300",
+  goalCompletion: "8 / 12",
+  savingsRate: "64",
+  globalAura: "1240",
+  achievements: "12/50",
+  profilePic: null,
+};
+
+interface AlertState {
+  text: string;
+  type: "success" | "error" | "info";
+}
+
+// ============================================================================
+// CORE DATA UTILITIES
+// ============================================================================
+
+/**
+ * Calculates dynamic profile completion percentages deterministically.
+ */
+const evaluateCompletionMetrics = (profile: UserProfile): number => {
+  const mandatoryFields: (keyof UserProfile)[] = [
+    "name", "email", "phone", "location", "accountType", "bio", "profilePic"
+  ];
+  const completedCount = mandatoryFields.filter(field => Boolean(profile[field])).length;
+  return Math.min(100, Math.round((completedCount / mandatoryFields.length) * 100));
+};
+
+/**
+ * Processes a string representing the savings rate percentage to map a dynamic gamified status title.
+ */
+const resolveAuraGamifiedTitle = (rateString: string): string => {
+  const parsedRate = parseInt(rateString.replace(/[^0-9]/g, ""), 10) || 0;
+  if (parsedRate < 5) return "🌱 Budget Rookie";
+  if (parsedRate < 10) return "💸 Coin Collector";
+  if (parsedRate < 15) return "🌿 Cash Sprout";
+  if (parsedRate < 20) return "📈 Savings Explorer";
+  if (parsedRate < 30) return "💎 Money Mover";
+  if (parsedRate < 40) return "🚀 Wealth Builder";
+  if (parsedRate < 50) return "🏆 Finance Slayer";
+  if (parsedRate < 60) return "👑 Bag Secured";
+  if (parsedRate < 75) return "🔥 Wealth Wizard";
+  return "🌳 MoneyPlant Legend";
+};
+
+/**
+ * Strips non-numeric characters and structures localization signatures safely.
+ */
+const formatIndianCurrency = (rawAmount: string): string => {
+  const cleanlyParsedDigits = rawAmount.replace(/[^0-9]/g, "");
+  if (!cleanlyParsedDigits) return "₹0";
+  const numericValue = parseInt(cleanlyParsedDigits, 10);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0
+  }).format(numericValue);
+};
+
+// ============================================================================
+// ATOMIC SUB-COMPONENTS (MEMOIZED)
+// ============================================================================
+
+const StatCard = memo(function StatCard({ 
+  label, value, color, icon 
+}: { 
+  label: string; value: string; color: string; icon?: React.ReactNode 
+}) {
+  return (
+    <motion.div 
+      whileHover={{ y: -2 }}
+      className="bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800/60 shadow-sm flex flex-col justify-between min-w-0 w-full overflow-hidden"
+    >
+      <div className="flex items-center gap-1.5 text-neutral-400 dark:text-neutral-500 mb-2 min-w-0">
+        {icon && <span className="shrink-0" aria-hidden="true">{icon}</span>}
+        <p className="text-[10px] font-black uppercase tracking-widest truncate">{label}</p>
+      </div>
+      <p className={cn("text-xl md:text-2xl font-black tracking-tight leading-tight truncate block max-w-full", color)}>
+        {value}
+      </p>
+    </motion.div>
+  );
+});
+
+const EditableField = memo(function EditableField({
+  label, id, name, value, type = "text", placeholder, onChange
+}: {
+  label: string; id: string; name: string; value: string; type?: string; placeholder?: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      <label htmlFor={id} className="font-black text-[10px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+        {label}
+      </label>
+      <input
+        id={id}
+        name={name}
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={onChange}
+        className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-4 py-2.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 outline-none focus:border-yellow-400 dark:focus:border-yellow-500 transition-all w-full shadow-sm"
+      />
+    </div>
+  );
+});
+
+// ============================================================================
+// MAIN PAGE COMPONENT
+// ============================================================================
 
 export default function ProfilePage() {
-  const [profilePic, setProfilePic] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [message, setMessage] = useState<string>("");
-  const [name, setName] = useState("Player One");
-  const [title, setTitle] = useState("Level 12 Wealth Guardian");
-  const [email, setEmail] = useState("player.one@moneyplant.app");
-  const [phone, setPhone] = useState("+91 98765 43210");
-  const [location, setLocation] = useState("Bengaluru, India");
-  const [accountType, setAccountType] = useState("Premium Saver");
-  const [joinedDate, setJoinedDate] = useState("June 2024");
-  const [bio, setBio] = useState("Building better money habits one plant at a time.");
-  const [totalSaved, setTotalSaved] = useState("₹1,24,800");
-  const [monthlyAverage, setMonthlyAverage] = useState("₹12,300");
-  const [goalCompletion, setGoalCompletion] = useState("8 / 12");
-  const [profileCompletion, setProfileCompletion] = useState(86);
-  const [isProfileLoaded, setIsProfileLoaded] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  
+  // Single Consolidated Object State 
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [draftProfile, setDraftProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [alert, setAlert] = useState<AlertState | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePic(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  // Compute values dynamically derived from primary model state parameters
+  const activeTitle = useMemo(() => resolveAuraGamifiedTitle(profile.savingsRate), [profile.savingsRate]);
+  const currentCompletionPercentage = useMemo(() => evaluateCompletionMetrics(profile), [profile]);
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
+  const triggerAlertMessage = useCallback((text: string, type: AlertState["type"] = "info") => {
+    setAlert({ text, type });
+    setTimeout(() => setAlert(null), 4000);
+  }, []);
 
-  const calculateCompletion = (fields: Array<string | null>) => {
-    const filled = fields.filter((value) => Boolean(value)).length;
-    return Math.min(100, Math.round((filled / fields.length) * 100));
-  };
-
-  const loadProfileFromLocalStorage = () => {
-    if (typeof window === "undefined") return;
-    const storedProfile = window.localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (!storedProfile) {
-      setProfileCompletion(calculateCompletion([name, email, phone, location, accountType, bio, profilePic]));
-      setIsProfileLoaded(true);
-      return;
-    }
-
+  /**
+   * Dispatches network configurations to fetch profile state structures
+   */
+  const loadProfileDataset = useCallback(async () => {
     try {
-      const data = JSON.parse(storedProfile);
-      const profileData = {
-        name: data.name || name,
-        title: data.title || title,
-        email: data.email || email,
-        phone: data.phone || phone,
-        location: data.location || location,
-        accountType: data.accountType || accountType,
-        joinedDate: data.joinedDate || joinedDate,
-        bio: data.bio || bio,
-        totalSaved: data.totalSaved || totalSaved,
-        monthlyAverage: data.monthlyAverage || monthlyAverage,
-        goalCompletion: data.goalCompletion || goalCompletion,
-        profilePic: data.profilePic || profilePic,
-      };
-
-      setName(profileData.name);
-      setTitle(profileData.title);
-      setEmail(profileData.email);
-      setPhone(profileData.phone);
-      setLocation(profileData.location);
-      setAccountType(profileData.accountType);
-      setJoinedDate(profileData.joinedDate);
-      setBio(profileData.bio);
-      setTotalSaved(profileData.totalSaved);
-      setMonthlyAverage(profileData.monthlyAverage);
-      setGoalCompletion(profileData.goalCompletion);
-      setProfilePic(profileData.profilePic);
-      setProfileCompletion(
-        calculateCompletion([
-          profileData.name,
-          profileData.email,
-          profileData.phone,
-          profileData.location,
-          profileData.accountType,
-          profileData.bio,
-          profileData.profilePic,
-        ])
-      );
-    } catch {
-      setProfileCompletion(calculateCompletion([name, email, phone, location, accountType, bio, profilePic]));
-    }
-
-    setIsProfileLoaded(true);
-  };
-
-  const fetchProfile = async () => {
-    try {
-      const response = await fetch("/api/profile", { cache: "no-store" });
-      if (!response.ok) throw new Error("Profile fetch failed");
-      const result = await response.json();
-      if (result.success && result.data) {
-        const profileData = result.data;
-        setName(profileData.name ?? name);
-        setTitle(profileData.title ?? title);
-        setEmail(profileData.email ?? email);
-        setPhone(profileData.phone ?? phone);
-        setLocation(profileData.location ?? location);
-        setAccountType(profileData.accountType ?? accountType);
-        setJoinedDate(profileData.joinedDate ?? joinedDate);
-        setBio(profileData.bio ?? bio);
-        setTotalSaved(profileData.totalSaved ?? totalSaved);
-        setMonthlyAverage(profileData.monthlyAverage ?? monthlyAverage);
-        setGoalCompletion(profileData.goalCompletion ?? goalCompletion);
-        setProfilePic(profileData.profilePic ?? profilePic);
-        setProfileCompletion(
-          calculateCompletion([
-            profileData.name ?? name,
-            profileData.email ?? email,
-            profileData.phone ?? phone,
-            profileData.location ?? location,
-            profileData.accountType ?? accountType,
-            profileData.bio ?? bio,
-            profileData.profilePic ?? profilePic,
-          ])
-        );
+      const response = await fetch("/api/profile", { method: "GET", cache: "no-store" });
+      if (!response.ok) throw new Error("Fallback upstream tracking triggered.");
+      const payload = await response.json();
+      
+      if (payload?.success && payload?.data) {
+        setProfile(payload.data);
+        setDraftProfile(payload.data);
+        return;
       }
     } catch {
-      loadProfileFromLocalStorage();
+      // Local Storage Fallback Recovery Routine
+      if (typeof window !== "undefined") {
+        const structuralCachedData = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+        if (structuralCachedData) {
+          try {
+            const parsedData = JSON.parse(structuralCachedData) as UserProfile;
+            setProfile(parsedData);
+            setDraftProfile(parsedData);
+            return;
+          } catch {
+            triggerAlertMessage("Corrupted cache context dropped.", "error");
+          }
+        }
+      }
     } finally {
-      setIsProfileLoaded(true);
+      setHasHydrated(true);
     }
-  };
+  }, [triggerAlertMessage]);
 
-  const saveProfile = async () => {
+  useEffect(() => {
+    loadProfileDataset();
+  }, [loadProfileDataset]);
+
+  // Input Field Reducer Handler
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setDraftProfile(prev => ({ ...prev, [name]: value }));
+  }, []);
+
+  /**
+   * Validates payloads and synchronizes modifications upstream.
+   */
+  const executeProfileSave = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
     if (typeof window === "undefined") return;
-    const profileData = {
-      name,
-      title,
-      email,
-      phone,
-      location,
-      accountType,
-      joinedDate,
-      bio,
-      totalSaved,
-      monthlyAverage,
-      goalCompletion,
-      profilePic,
-    };
+    setIsProcessing(true);
+
+    // Baseline Input Form Sanitization Constraints
+    if (!draftProfile.name.trim() || !draftProfile.email.trim()) {
+      triggerAlertMessage("Identity tracking attributes cannot be blank.", "error");
+      setIsProcessing(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify(draftProfile),
       });
 
-      const result = await response.json();
-      if (result.success) {
-        window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profileData));
-        setProfileCompletion(
-          calculateCompletion([
-            profileData.name,
-            profileData.email,
-            profileData.phone,
-            profileData.location,
-            profileData.accountType,
-            profileData.bio,
-            profileData.profilePic,
-          ])
-        );
-        setMessage("Profile saved to backend and local storage.");
-      } else {
-        throw new Error(result.message || "Profile save failed");
-      }
+      const parsedResponse = await response.json();
+      if (!parsedResponse.success) throw new Error("Cloud rejection recorded.");
+      
+      setProfile(draftProfile);
+      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(draftProfile));
+      triggerAlertMessage("Cloud database sync finalized successfully.", "success");
+      setIsEditMode(false);
     } catch {
-      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profileData));
-      setProfileCompletion(
-        calculateCompletion([
-          profileData.name,
-          profileData.email,
-          profileData.phone,
-          profileData.location,
-          profileData.accountType,
-          profileData.bio,
-          profileData.profilePic,
-        ])
-      );
-      setMessage("Saved locally; backend sync will be retried later.");
+      // Offline Persistence Synchronization Fallback Strategy
+      setProfile(draftProfile);
+      window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(draftProfile));
+      triggerAlertMessage("Local cache secured; upstream persistent link delayed.", "info");
+      setIsEditMode(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [draftProfile, triggerAlertMessage]);
+
+  /**
+   * Processes raw image streaming configurations securely.
+   */
+  const processImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const targetedFile = e.target.files?.[0];
+    if (!targetedFile) return;
+
+    if (targetedFile.size > MAX_IMAGE_SIZE_BYTES) {
+      triggerAlertMessage("Payload boundary violated. Cap file dimensions to 2MB.", "error");
+      return;
     }
 
-    setTimeout(() => setMessage(""), 2400);
-    setEditMode(false);
-  };
+    const standardReader = new FileReader();
+    standardReader.onloadend = () => {
+      const encodedString = standardReader.result as string;
+      if (isEditMode) {
+        setDraftProfile(prev => ({ ...prev, profilePic: encodedString }));
+      } else {
+        setProfile(prev => {
+          const directProfileUpdate = { ...prev, profilePic: encodedString };
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(directProfileUpdate));
+          }
+          return directProfileUpdate;
+        });
+        triggerAlertMessage("Avatar updated dynamically.", "success");
+      }
+    };
+    standardReader.readAsDataURL(targetedFile);
+  }, [isEditMode, triggerAlertMessage]);
 
-  useEffect(() => {
-    fetchProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleSessionTermination = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+
+      const globalCookies = window.document.cookie.split(";");
+      for (let index = 0; index < globalCookies.length; index++) {
+        const targetingCookie = globalCookies[index];
+        const breakpointPosition = targetingCookie.indexOf("=");
+        const validatedCookieName = breakpointPosition > -1 
+          ? targetingCookie.substring(0, breakpointPosition).trim() 
+          : targetingCookie.trim();
+        
+        window.document.cookie = `${validatedCookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+        window.document.cookie = `${validatedCookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;`;
+      }
+    } finally {
+      window.location.href = "/login";
+    }
   }, []);
 
+  // Hydration Blocking Prevention Guard Initializer
+  if (!hasHydrated) {
+    return (
+      <div className="w-full space-y-6 p-4 md:p-8 max-w-5xl mx-auto opacity-100 animate-pulse" aria-hidden="true">
+        <div className="h-6 w-1/4 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+        <div className="h-44 bg-neutral-200 dark:bg-neutral-800 rounded-[36px]" />
+      </div>
+    );
+  }
+
+  // Sanitized Dynamic Intermediary Parsing to Protect Against String Crashes
+  const calculatedGlobalAura = parseInt(profile.globalAura.replace(/[^0-9]/g, ""), 10) || 0;
+
   return (
-    <div className="w-full min-w-0 space-y-6 sm:space-y-8 p-4 md:p-8 max-w-5xl mx-auto">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
-            Character sheet
+    <div className="w-full min-w-0 space-y-6 sm:space-y-8 p-4 md:p-8 max-w-5xl mx-auto transform-gpu selection:bg-yellow-200 selection:text-black">
+      
+      {/* ACTION HEADER DESK COMPONENT */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] select-none">
+            Character Sheets Matrix
           </p>
-          <p className="text-sm text-text-light mt-2 max-w-2xl">
-            Manage your profile, update details, and keep your MoneyPlant identity consistent across the app.
-          </p>
+          <h1 className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 max-w-2xl leading-relaxed">
+            Monitor asset statistics parameters, secure algorithmic parameters, and audit system authentication layers.
+          </h1>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setEditMode((current) => !current)}
-          className="inline-flex items-center gap-2 bg-yellow-400 text-black rounded-xl px-4 py-2 font-bold text-[10px] uppercase tracking-wider hover:scale-105 transition-transform shadow-sm"
-        >
-          <Edit3 size={14} />
-          {editMode ? "Close edit" : "Edit profile"}
-        </button>
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-start sm:justify-end shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setDraftProfile(profile);
+              setIsEditMode(prev => !prev);
+            }}
+            className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl px-4 py-2.5 font-black text-[10px] uppercase tracking-wider transition-all shadow-sm cursor-pointer select-none"
+          >
+            <Edit3 size={12} />
+            {isEditMode ? "Close Desk" : "Modify Framework"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSessionTermination}
+            className="inline-flex items-center gap-2 bg-red-500 text-white rounded-xl px-4 py-2.5 font-black text-[10px] uppercase tracking-wider hover:bg-red-600 active:scale-98 transition-all shadow-sm cursor-pointer select-none"
+          >
+            <LogOut size={12} />
+            Purge Session
+          </button>
+        </div>
       </div>
 
-      {message ? (
-        <div className="rounded-3xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700">
-          {message}
-        </div>
-      ) : null}
+      {/* ARIA ACCESSIBLE LIVE BANNERS STATUS NOTIFICATION PORT */}
+      <AnimatePresence>
+        {alert && (
+          <motion.div 
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className={cn(
+              "rounded-2xl border px-4 py-3 text-xs font-black tracking-tight flex items-center gap-2",
+              alert.type === "success" && "border-green-200 bg-green-50 text-green-800 dark:bg-green-950/30 dark:border-green-900/40 dark:text-green-400",
+              alert.type === "error" && "border-red-200 bg-red-50 text-red-800 dark:bg-red-950/30 dark:border-red-900/40 dark:text-red-400",
+              alert.type === "info" && "border-blue-200 bg-blue-50 text-blue-800 dark:bg-blue-950/30 dark:border-blue-900/40 dark:text-blue-400"
+            )}
+          >
+            <Shield size={12} className="shrink-0" />
+            {alert.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* PROFILE INFO CARD */}
+      {/* COMPREHENSIVE IDENTIFICATION OVERVIEW BOX */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm relative overflow-hidden"
+        layout="position"
+        className="bg-white dark:bg-neutral-900 p-6 md:p-8 rounded-[36px] border border-neutral-100 dark:border-neutral-800/60 shadow-sm relative overflow-hidden"
       >
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-           <Zap size={200} />
+        <div className="absolute top-0 right-0 p-8 opacity-[0.02] dark:opacity-[0.04] pointer-events-none text-neutral-900 dark:text-white" aria-hidden="true">
+          <Zap size={240} />
         </div>
         
-        <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
-          {/* AVATAR UPLOAD SECTION */}
-          <div className="relative group">
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-32 h-32 md:w-40 md:h-40 rounded-[45px] bg-gray-50 border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center cursor-pointer relative"
-              onClick={triggerFileInput}
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 relative z-10">
+          
+          {/* AVATAR HERO COMPONENT SECTOR */}
+          <div className="relative shrink-0 select-none">
+            <div 
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+              aria-label="Upload custom user identification graphic asset"
+              className="w-28 h-28 md:w-32 md:h-32 rounded-[32px] bg-neutral-50 dark:bg-neutral-950 border-4 border-white dark:border-neutral-900 shadow-xl overflow-hidden flex items-center justify-center cursor-pointer relative group outline-none focus-visible:ring-4 focus-visible:ring-yellow-400"
             >
-              {profilePic ? (
-                <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+              {(isEditMode ? draftProfile.profilePic : profile.profilePic) ? (
+                <img 
+                  src={isEditMode ? draftProfile.profilePic! : profile.profilePic!} 
+                  alt="Identity authorization visualization matrix" 
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                <div className="flex flex-col items-center text-gray-300">
-                  <User size={48} />
-                  <span className="text-[8px] font-black uppercase mt-1">No Image</span>
+                <div className="flex flex-col items-center text-neutral-300 dark:text-neutral-700">
+                  <User size={40} />
+                  <span className="text-[8px] font-black uppercase mt-1 tracking-wider">Unbound</span>
                 </div>
               )}
-              
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Camera className="text-white" size={24} />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="text-white" size={22} />
               </div>
-            </motion.div>
+            </div>
             
             <input 
               type="file" 
               ref={fileInputRef} 
-              onChange={handleFileChange} 
+              onChange={processImageUpload} 
               className="hidden" 
-              accept="image/*"
+              accept="image/png, image/jpeg, image/webp" 
             />
-            
-            <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-white p-2.5 rounded-2xl shadow-xl">
-              <Shield size={20} />
+            <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-neutral-950 p-2 rounded-xl shadow-lg border-2 border-white dark:border-neutral-900" aria-hidden="true">
+              <Shield size={14} />
             </div>
           </div>
 
-          <div className="text-center md:text-left flex-1">
-            <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none mb-2">
-              {name}
-            </h1>
-            <p className="text-gray-400 font-bold uppercase text-xs tracking-[0.2em] mb-4">
-              {title}
+          {/* ATTRIBUTE TEXT CORE RENDER SYSTEM */}
+          <div className="text-center md:text-left flex-1 min-w-0 w-full">
+            <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase leading-none mb-2 text-neutral-900 dark:text-neutral-50 break-words">
+              {isEditMode ? draftProfile.name : profile.name}
+            </h2>
+            <div className="mb-3">
+              <span className="text-purple-600 dark:text-purple-400 font-extrabold uppercase text-[10px] tracking-wider bg-purple-50 dark:bg-purple-950/40 px-2.5 py-1 rounded-lg border border-purple-100/30">
+                {activeTitle}
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-xl leading-relaxed mb-5 break-words font-medium">
+              {isEditMode ? draftProfile.bio : profile.bio}
             </p>
-            <p className="text-sm text-text-light max-w-xl mx-auto md:mx-0 mb-6">
-              {bio}
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-              <div className="flex items-center gap-2 px-4 py-3 bg-green-50 text-green-600 rounded-2xl text-[10px] font-black uppercase tracking-wider border border-green-100">
-                <Star size={12} fill="currentColor" /> Active streak: 5 days
+            
+            <div className="flex flex-wrap justify-center md:justify-start gap-2 w-full overflow-hidden" role="list">
+              <div role="listitem" className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 rounded-xl text-[9px] font-black uppercase tracking-wider border border-green-100/20 shrink-0">
+                <Star size={10} fill="currentColor" /> Tracking streak: Active continuous
               </div>
-              <div className="flex items-center gap-2 px-4 py-3 bg-purple-50 text-purple-600 rounded-2xl text-[10px] font-black uppercase tracking-wider border border-purple-100">
-                <Award size={12} /> Pro member
-              </div>
-              <div className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-wider">
-                <Mail size={12} /> {email}
-              </div>
-              <div className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-wider">
-                <Phone size={12} /> {phone}
-              </div>
-              <div className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-wider">
-                <MapPin size={12} /> {location}
-              </div>
-              <div className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-wider">
-                <ShieldCheck size={12} /> {accountType}
+              <div role="listitem" className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 rounded-xl text-[9px] font-black uppercase tracking-wider border border-purple-100/20 shrink-0">
+                <Award size={10} /> Tier Architecture Level Verified
               </div>
             </div>
           </div>
         </div>
 
-        {editMode ? (
-          <div className="mt-10 space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-2 text-sm">
-                <span className="font-black uppercase tracking-[0.35em] text-text-light">Name</span>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none"
-                />
-              </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-black uppercase tracking-[0.35em] text-text-light">Title</span>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none"
-                />
-              </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-black uppercase tracking-[0.35em] text-text-light">Email</span>
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none"
-                />
-              </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-black uppercase tracking-[0.35em] text-text-light">Phone</span>
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none"
-                />
-              </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-black uppercase tracking-[0.35em] text-text-light">Location</span>
-                <input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none"
-                />
-              </label>
-              <label className="space-y-2 text-sm">
-                <span className="font-black uppercase tracking-[0.35em] text-text-light">Account type</span>
-                <input
-                  value={accountType}
-                  onChange={(e) => setAccountType(e.target.value)}
-                  className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none"
-                />
-              </label>
+        {/* COMPONENT INTERACTION DISPATCHER (FORM MODE) */}
+        {isEditMode ? (
+          <form onSubmit={executeProfileSave} className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800/80 space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <EditableField label="Operational Alias" id="edit-name" name="name" value={draftProfile.name} onChange={handleInputChange} />
+              <EditableField label="Comms Routing Port (Email)" id="edit-email" name="email" type="email" value={draftProfile.email} onChange={handleInputChange} />
+              <EditableField label="Secure Line Linkage" id="edit-phone" name="phone" value={draftProfile.phone} onChange={handleInputChange} />
+              <EditableField label="Spatial Cluster Context (Location)" id="edit-location" name="location" value={draftProfile.location} onChange={handleInputChange} />
+              <EditableField label="System Hierarchy Account Placement" id="edit-accountType" name="accountType" value={draftProfile.accountType} onChange={handleInputChange} />
+              <EditableField label="Velocity Standard Vector (Savings %)" id="edit-savingsRate" name="savingsRate" value={draftProfile.savingsRate} onChange={handleInputChange} placeholder="e.g. 64" />
+              <EditableField label="Total Pool Accrued Metrics" id="edit-totalSaved" name="totalSaved" value={draftProfile.totalSaved} onChange={handleInputChange} />
+              <EditableField label="Telemetry Quantization Level (Aura)" id="edit-globalAura" name="globalAura" value={draftProfile.globalAura} onChange={handleInputChange} />
+              <EditableField label="Milestone Matrices Completed" id="edit-achievements" name="achievements" value={draftProfile.achievements} onChange={handleInputChange} />
             </div>
 
-            <label className="space-y-2 text-sm">
-              <span className="font-black uppercase tracking-[0.35em] text-text-light">Bio</span>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={4}
-                className="w-full rounded-3xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold outline-none"
+            <div className="flex flex-col gap-1.5 w-full">
+              <label htmlFor="edit-bio" className="font-black text-[10px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                Bio Data Framework
+              </label>
+              <textarea 
+                id="edit-bio"
+                name="bio"
+                value={draftProfile.bio} 
+                onChange={handleInputChange}
+                rows={3} 
+                className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-4 py-2.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 outline-none focus:border-yellow-400 dark:focus:border-yellow-500 transition-all w-full resize-none shadow-sm"
               />
-            </label>
+            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={saveProfile}
-                className="rounded-3xl bg-primary text-white py-3 px-5 text-sm font-black uppercase tracking-[0.35em] hover:brightness-110 transition"
+            <div className="flex gap-2 pt-2">
+              <button 
+                type="submit" 
+                disabled={isProcessing}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-950 py-2.5 px-4 text-[10px] font-black uppercase tracking-wider hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50 transition shadow-md cursor-pointer"
               >
-                Save changes
+                {isProcessing ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
+                Commit Configurations
               </button>
-              <button
-                type="button"
-                onClick={() => setEditMode(false)}
-                className="rounded-3xl border border-white/10 bg-white/10 text-text-main py-3 px-5 text-sm font-black uppercase tracking-[0.35em] hover:bg-white/20 transition"
+              <button 
+                type="button" 
+                onClick={() => setIsEditMode(false)} 
+                className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-300 py-2.5 px-4 text-[10px] font-black uppercase tracking-wider hover:bg-neutral-50 dark:hover:bg-neutral-900 transition shadow-sm cursor-pointer"
               >
-                Cancel
+                <X size={12} />
+                Abort Changes
               </button>
             </div>
-          </div>
+          </form>
         ) : (
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard label="Email" value={email} color="text-text-main" />
-            <StatCard label="Phone" value={phone} color="text-text-main" />
-            <StatCard label="Location" value={location} color="text-text-main" />
-            <StatCard label="Joined" value={joinedDate} color="text-text-main" />
-            <StatCard label="Account" value={accountType} color="text-primary" />
-            <StatCard label="Goals completed" value={goalCompletion} color="text-purple-500" />
+          /* READ-ONLY PORT BLOCK LAYOUT */
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard label="Email Configuration Link" value={profile.email} color="text-neutral-900 dark:text-neutral-100 font-bold" icon={<Mail size={12} />} />
+            <StatCard label="Secure Signal Line" value={profile.phone} color="text-neutral-900 dark:text-neutral-100 font-bold" icon={<Phone size={12} />} />
+            <StatCard label="Spatial Core Sector" value={profile.location} color="text-neutral-900 dark:text-neutral-100 font-bold" icon={<MapPin size={12} />} />
+            <StatCard label="Initialization Cluster Timestamp" value={profile.joinedDate} color="text-neutral-400 dark:text-neutral-500 font-bold" />
+            <StatCard label="Ecosystem Placement Ranking" value={profile.accountType} color="text-purple-600 dark:text-purple-400 font-black" />
+            <StatCard label="Calculated Net Resource Cache" value={formatIndianCurrency(profile.totalSaved)} color="text-green-600 dark:text-green-400 font-black" />
           </div>
         )}
       </motion.div>
 
+      {/* MID-TIER MATRIX BENTO CONFIGURATIONS */}
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="glass-panel p-6 rounded-[32px] border border-white/10 bg-white/60 dark:bg-white/5 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] font-black text-text-light">
-                Profile completion
-              </p>
-              <h2 className="mt-3 text-2xl font-black text-text-main">{profileCompletion}% complete</h2>
+        
+        {/* COMPREHENSIVE FILL STATUS RUNTIME GRAPH */}
+        <div className="p-6 rounded-[28px] border border-neutral-100 dark:border-neutral-800/60 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between min-w-0">
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-widest font-black text-neutral-400 dark:text-neutral-500">
+                  Data Structure Integrity Gauge
+                </p>
+                <h3 className="mt-1 text-xl font-black text-neutral-900 dark:text-neutral-50 truncate">
+                  {currentCompletionPercentage}% Schema Sync
+                </h3>
+              </div>
+              <div className="self-start sm:self-auto rounded-xl bg-purple-50 dark:bg-purple-950/40 px-3 py-1 text-purple-600 dark:text-purple-400 text-[8px] font-black uppercase tracking-wider border border-purple-100/10 shrink-0 select-none">
+                Optimized Configuration
+              </div>
             </div>
-            <div className="rounded-3xl bg-primary/10 px-4 py-2 text-primary text-xs font-black uppercase tracking-[0.35em]">
-              Keep profile updated
+            
+            <div className="mt-4 h-2.5 rounded-full bg-neutral-100 dark:bg-neutral-950 overflow-hidden w-full border border-neutral-200/5 shadow-inner">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-purple-500 transition-all duration-700 ease-out"
+                style={{ width: `${currentCompletionPercentage}%` }}
+              />
             </div>
           </div>
-          <div className="mt-5 h-3 rounded-full bg-black/5 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
-              style={{ width: `${profileCompletion}%` }}
-            />
-          </div>
-          <p className="mt-3 text-sm text-text-light">
-            Complete your profile to unlock personalized suggestions, custom savings plans, and faster support.
+          <p className="mt-4 text-xs text-neutral-400 dark:text-neutral-500 leading-relaxed font-medium">
+            Maintain high metadata completeness ratios across the storage array to unblock localized parameter overrides, priority support tiers, and target asset profiling logic.
           </p>
         </div>
 
-        <div className="glass-panel p-6 rounded-[32px] border border-white/10 bg-white/60 dark:bg-white/5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <ShieldCheck size={20} className="text-primary" />
-            <p className="text-sm font-black uppercase tracking-[0.35em] text-text-main">
-              Security & account
+        {/* SECURITY & ACCOUNT AUDITING STATUS CONTAINER */}
+        <div className="p-6 rounded-[28px] border border-neutral-100 dark:border-neutral-800/60 bg-white dark:bg-neutral-900 shadow-sm min-w-0">
+          <div className="flex items-center gap-2 mb-4 select-none">
+            <ShieldCheck size={16} className="text-purple-500" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-900 dark:text-neutral-50">
+              Identity Verification Logs
             </p>
           </div>
-          <div className="mt-5 space-y-4 text-sm text-text-light">
-            <div className="flex items-center justify-between gap-3 rounded-3xl bg-black/5 px-4 py-3">
-              <div>
-                <p className="font-black text-text-main">Two-step verification</p>
-                <p className="text-xs uppercase tracking-[0.35em] text-text-light">Strong</p>
+          
+          <div className="space-y-2 text-xs w-full font-bold">
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 px-4 py-2.5 min-w-0 border border-neutral-100/20">
+              <div className="min-w-0">
+                <p className="text-neutral-900 dark:text-neutral-100 text-xs truncate">Two-Factor Authentication</p>
+                <p className="text-[8px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mt-0.5">Hardware Key Enforced</p>
               </div>
-              <span className="rounded-full bg-success/10 px-3 py-1 text-[10px] font-black uppercase text-success">
-                Enabled
+              <span className="rounded-lg bg-green-100 dark:bg-green-950/60 px-2.5 py-1 text-[8px] font-black uppercase text-green-700 dark:text-green-400 shrink-0 shadow-sm border border-green-200/10">
+                ACTIVE
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-3xl bg-black/5 px-4 py-3">
-              <div>
-                <p className="font-black text-text-main">Account type</p>
-                <p className="text-xs uppercase tracking-[0.35em] text-text-light">Membership tier</p>
+
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 px-4 py-2.5 min-w-0 border border-neutral-100/20">
+              <div className="min-w-0">
+                <p className="text-neutral-900 dark:text-neutral-100 text-xs truncate">Database Node Class</p>
+                <p className="text-[8px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mt-0.5">Authorization Layer</p>
               </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black uppercase text-primary">
-                {accountType}
+              <span className="rounded-lg bg-purple-100 dark:bg-purple-950/60 px-2.5 py-1 text-[8px] font-black uppercase text-purple-700 dark:text-purple-400 shrink-0 shadow-sm border border-purple-200/10">
+                {profile.accountType}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-3xl bg-black/5 px-4 py-3">
-              <div>
-                <p className="font-black text-text-main">Saved contact</p>
-                <p className="text-xs uppercase tracking-[0.35em] text-text-light">Phone verified</p>
+
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 dark:bg-neutral-950/40 px-4 py-2.5 min-w-0 border border-neutral-100/20">
+              <div className="min-w-0">
+                <p className="text-neutral-900 dark:text-neutral-100 text-xs truncate">Encryption Handshake</p>
+                <p className="text-[8px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mt-0.5">Transport Tier</p>
               </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black uppercase text-primary">
-                Verified
+              <span className="rounded-lg bg-purple-100 dark:bg-purple-950/60 px-2.5 py-1 text-[8px] font-black uppercase text-purple-700 dark:text-purple-400 shrink-0 shadow-sm border border-purple-200/10">
+                SECURE SSL
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard label="Global Aura" value="+1,240" color="text-yellow-500" />
-        <StatCard label="Savings Rate" value="64%" color="text-green-500" />
-        <StatCard label="Achievements" value="12/50" color="text-purple-500" />
+      {/* LOWER TIER PERFORMANCE GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard label="Ecosystem Telemetry (Global Aura)" value={`+${calculatedGlobalAura.toLocaleString("en-IN")}`} color="text-yellow-500 dark:text-yellow-400 font-black" />
+        <StatCard label="Velocity Coefficient (Savings Rate)" value={`${profile.savingsRate}%`} color="text-green-500 dark:text-green-400 font-black" />
+        <StatCard label="Milestones Converted" value={profile.achievements} color="text-purple-500 dark:text-purple-400 font-black" />
       </div>
     </div>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <motion.div 
-      whileHover={{ y: -5 }}
-      className="bg-white p-8 rounded-[35px] border border-gray-100 shadow-sm"
-    >
-      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{label}</p>
-      <p className={`text-3xl font-black tracking-tighter ${color}`}>{value}</p>
-    </motion.div>
   );
 }

@@ -1,196 +1,286 @@
 @import "tailwindcss";
 
-/* 🌿 ================= DESIGN SYSTEM TOKENS (Tailwind v4) ================= */
-@theme {
-  /* Vibe Palette Sync */
-  --color-primary: #C3ACFF;
+/* 🌿 ================= SYSTEM CONFIGURATION & TOKENS (Tailwind v4) ================= */
+@theme inline {
+  /* Brand System Structural Foundations */
+  --color-primary: #6D28D9;
+  --color-primary-light: #C3ACFF;
   --color-secondary: #FFB5E8;
   --color-accent: #FFF1AC;
-  --color-success: #B2F2BB;
-  --color-danger: #FF9B9B;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
   
-  --radius-vibe: 32px;
+  /* Layout Architecture Framework Constants */
+  --radius-vibe: 28px;
   --radius-md: 18px;
+  --radius-sm: 12px;
 
-  /* Premium Animations */
-  --animate-vibe-float: float 5s ease-in-out infinite;
-  --animate-text-shine: text-shine 5s linear infinite;
+  /* Premium Hardware-Accelerated Animation Lifecycles */
+  --animate-vibe-float: vibe-float 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  --animate-text-shine: text-shine 6s linear infinite;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-grow-progress: grow-progress 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+  @keyframes vibe-float {
+    0%, 100% { transform: translateY(0) translateZ(0); }
+    50% { transform: translateY(-8px) translateZ(0); }
   }
   @keyframes text-shine {
-    to { background-position: 200% center; }
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
   }
   @keyframes grow-progress {
-    from { width: 0%; }
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
   }
 }
 
-/* 🌍 GLOBAL RESET & DYNAMIC THEME ENGINE */
+/* 🌍 GLOBAL LAYOUT ARCHITECTURE & ACCELERATED RESET ENGINE */
 @layer base {
   :root {
-    /* Light Mode - Soft & Airy */
-    --bg-main: #FDFDFD;
-    --bg-accent: #FFFDF0;
-    --text-main: #121214;
-    --text-light: #64748b;
-
-    /* Glassmorphism Logic */
-    --glass-bg: rgba(255, 255, 255, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-reflection: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+    /* Premium High-Contrast Light Theme Matrix (Forced Pitch-Black Text Layers) */
+    --bg-main: #F8FAFC;         /* Clean off-white canvas base */
+    --bg-accent: #F1F5F9;       /* Section breaks and container gutters */
     
-    --shadow-vibe: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
-    --shadow-float: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+    /* 🛠️ High-Contrast Deep Charcoal/Obsidian Fixes */
+    --text-main: #0F172A;       /* Sharp Obsidian Black for Headings, Amounts, and Titles */
+    --text-light: #1E293B;      /* Solid Deep Slate for subtext, values, and list strings */
+    --text-muted: #475569;      /* Dense Slate Gray for metadata tags and minor labels */
+
+    /* Glassmorphic Panel Defs (Upgraded Opacity to Block Bleed Through) */
+    --glass-bg: rgba(255, 255, 255, 0.96);
+    --glass-border: rgba(15, 23, 42, 0.14);
+    --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%);
+    
+    /* System Precision Shadow Mapping fields */
+    --shadow-vibe: 0 10px 30px -5px rgba(15, 23, 42, 0.06), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+    --shadow-float: 0 20px 48px -8px rgba(15, 23, 42, 0.14), 0 8px 16px -4px rgba(15, 23, 42, 0.08);
+
+    /* Sidebar Interface Variable Elements */
+    --sidebar-bg: #97d1dc;
+    --sidebar-text: #020407;       /* Highly visible black side-links */
+    --sidebar-text-hover: #010208;
+    --sidebar-bg-active: rgba(109, 40, 217, 0.1);
+    --sidebar-text-active: #6D28D9;
   }
 
   .dark {
-    /* Dark Mode - Deep & Professional */
-    --bg-main: #0C0C0E;
-    --bg-accent: #16161A;
-    --text-main: #F8FAFC;
-    --text-light: #94A3B8;
+    /* Premium High-Contrast Dark Theme Matrix Tokens */
+    --bg-main: #09090B;
+    --bg-accent: #141417;
+    --text-main: #070b0f;
+    --text-light: #010305;
+    --text-muted: #010203;
     
-    --glass-bg: rgba(22, 22, 26, 0.8);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    /* Dark Mode Glassmorphic Engine Optimization Modifiers */
+    --glass-bg: rgba(186, 212, 236, 0.92);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 100%);
+    
+    --shadow-vibe: 0 12px 40px -6px rgba(0, 0, 0, 0.6);
+    --shadow-float: 0 30px 60px -12px rgba(0, 0, 0, 0.8);
+
+    /* Sidebar Dark-Mode Variants */
+    --sidebar-bg: #010102;
+    --sidebar-text: #02060a;
+    --sidebar-text-hover: #020607;
+    --sidebar-bg-active: rgba(195, 172, 255, 0.15);
+    --sidebar-text-active: #C3ACFF;
   }
 
   * {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    background: var(--bg-main);
+    background-color: var(--bg-main);
     color: var(--text-main);
     min-height: 100dvh;
-    overflow-x: hidden;
     width: 100%;
+    overflow-x: hidden;
+    position: relative;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    transition: background-color 0.5s ease;
+    text-rendering: optimizeLegibility;
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 🚨 CRITICAL SYSTEM OVERRIDE RESET: Locks element classes to readable channels */
+  h1, h2, h3, h4, h5, h6, th, td, strong {
+    color: var(--text-main) !important;
+  }
+  
+  p, span, label, li, a {
+    color: var(--text-light);
+  }
+
+  *:focus-visible {
+    outline: 3px solid var(--color-primary-light);
+    outline-offset: 2px;
   }
 }
 
-/* 🎨 ================= THE "LOVABLE" COMPONENTS ================= */
+/* 🎨 ================= ARCHITECTURAL ENGINE INTERFACES ================= */
 @layer components {
-  /* Animated Mesh Background (The "Aura") */
+  /**
+   * High-Visibility Sidebar Structural Layout.
+   */
+  .sidebar-container {
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--glass-border);
+    transition: background-color 0.3s ease;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    color: var(--sidebar-text) !important; /* Forces strict theme values */
+    font-weight: 700;                      /* Shifted to bolder style for enhanced layout tracking */
+    font-size: 14px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .nav-item:hover {
+    color: var(--sidebar-text-hover) !important;
+    background-color: rgba(15, 23, 42, 0.06);
+  }
+
+  .dark .nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .nav-item-active {
+    color: var(--sidebar-text-active) !important;
+    background-color: var(--sidebar-bg-active) !important;
+  }
+
+  /* Accessible Universal App Button Classes */
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: #FFFFFF !important;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-sm);
+    transition: opacity 0.2s ease;
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-secondary {
+    background-color: var(--sidebar-bg-active);
+    color: var(--sidebar-text-active) !important;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-sm);
+  }
+
+  /**
+   * Fluid Aura Canvas Mesh Layer.
+   */
   .vibe-canvas {
     position: fixed;
     inset: 0;
-    z-index: -1;
-    opacity: 0.6;
+    z-index: 0;
+    opacity: 0.4; /* Slightly brought down to keep backgrounds ultra clean */
     pointer-events: none;
+    user-select: none;
+    transform: translateZ(0);
+    will-change: transform;
     background: 
-      radial-gradient(at 0% 0%, hsla(253,16%,90%,1) 0, transparent 50%), 
-      radial-gradient(at 100% 0%, hsla(225,39%,90%,1) 0, transparent 50%), 
-      radial-gradient(at 100% 100%, hsla(339,49%,90%,1) 0, transparent 50%), 
-      radial-gradient(at 0% 100%, hsla(180,100%,90%,1) 0, transparent 50%);
+      radial-gradient(at 0% 0%, hsla(253, 60%, 93%, 1) 0px, transparent 50%), 
+      radial-gradient(at 100% 0%, hsla(225, 60%, 93%, 1) 0px, transparent 50%), 
+      radial-gradient(at 100% 100%, hsla(339, 60%, 93%, 1) 0px, transparent 50%), 
+      radial-gradient(at 0% 100%, hsla(180, 60%, 93%, 1) 0px, transparent 50px);
     filter: blur(100px);
   }
 
-  /* Deep Dark support for vibe-canvas */
   .dark .vibe-canvas {
+    opacity: 0.25;
     background: 
-      radial-gradient(at 0% 0%, hsla(253,30%,15%,1) 0, transparent 50%), 
-      radial-gradient(at 100% 0%, hsla(225,30%,15%,1) 0, transparent 50%), 
-      radial-gradient(at 100% 100%, hsla(339,30%,15%,1) 0, transparent 50%), 
-      radial-gradient(at 0% 100%, hsla(180,30%,15%,1) 0, transparent 50%);
+      radial-gradient(at 0% 0%, hsla(253, 40%, 8%, 1) 0px, transparent 50%), 
+      radial-gradient(at 100% 0%, hsla(225, 40%, 8%, 1) 0px, transparent 50%), 
+      radial-gradient(at 100% 100%, hsla(339, 40%, 8%, 1) 0px, transparent 50%), 
+      radial-gradient(at 0% 100%, hsla(180, 40%, 8%, 1) 0px, transparent 50%);
   }
 
-  /* 🧊 THE GLASS SYSTEM */
+  /**
+   * High-Performance Structural Glass Panel Matrix.
+   */
   .glass-panel {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(20px) saturate(190%);
+    -webkit-backdrop-filter: blur(20px) saturate(190%);
+    border: 1px solid var(--glass-border) !important;
     box-shadow: var(--shadow-vibe);
     border-radius: var(--radius-vibe);
     position: relative;
     overflow: hidden;
+    transform: translateZ(0);
   }
 
-  /* Subtle subtle highlight on top of glass */
-  .glass-panel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: var(--glass-reflection);
-    pointer-events: none;
-    opacity: 0.5;
-  }
-
-  /* ✨ HAPTIC INTERACTIONS */
+  /* Spring-Loaded Interaction Interfaces */
   .haptic-card {
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    will-change: transform, box-shadow;
+    transform: translateZ(0) scale(1);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: pointer;
   }
 
   .haptic-card:hover {
-    transform: translateY(-4px) scale(1.01);
+    transform: translateZ(0) translateY(-4px) scale(1.01);
     box-shadow: var(--shadow-float);
   }
 
-  .haptic-card:active {
-    transform: scale(0.97);
-  }
-
-  /* 🌟 PREMIUM GRADIENT TEXT */
+  /**
+   * Standardized Dynamic Text-Shine Linear Engine.
+   */
   .text-gradient {
-    background: linear-gradient(to right, #C3ACFF, #FFB5E8, #FFF1AC);
+    background: linear-gradient(to right, #6D28D9, #FF6BCE, #D97706, #6D28D9);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     background-size: 200% auto;
-    animation: text-shine 5s linear infinite;
+    animation: text-shine 6s linear infinite;
   }
 
-  /* 🌫 PREMIUM GRAIN OVERLAY */
-  .grain-overlay {
-    position: relative;
-  }
-
-  .grain-overlay::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    pointer-events: none;
-    opacity: 0.03;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    /* Ensures dark mode gets visible grain too */
-    filter: contrast(150%) brightness(100%);
+  .dark .text-gradient {
+    background: linear-gradient(to right, #C3ACFF, #FFB5E8, #FFF1AC, #C3ACFF);
+    -webkit-background-clip: text;
+    background-clip: text;
   }
 }
 
-/* 🎬 UTILITY CLASSES */
+/* 🎬 CORE UTILITY LAYOUT CONFIGURATIONS */
 @layer utilities {
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   
+  /* Precision Override Utility Classes to step over inline layouts manually */
+  .txt-black-main { color: #0F172A !important; }
+  .txt-black-light { color: #1E293B !important; }
+  .txt-black-muted { color: #475569 !important; }
+  
+  .dark .txt-black-main { color: #F8FAFC !important; }
+  .dark .txt-black-light { color: #CBD5E1 !important; }
+  .dark .txt-black-muted { color: #94A3B8 !important; }
+
   .animate-grow {
-    animation: grow-progress 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation: grow-progress 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: left;
+    will-change: transform;
   }
 
-  .label-caps {
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--text-light);
-    opacity: 0.8;
-  }
-
-  /* Bento Grid Utility for full alignment */
   .bento-grid {
     display: grid;
     gap: 1.5rem;
@@ -198,8 +288,6 @@
   }
 
   @media (min-width: 768px) {
-    .bento-grid {
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-    }
+    .bento-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
   }
 }

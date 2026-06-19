@@ -7,115 +7,177 @@ import AppProviders from "../components/providers/AppProviders";
 import { cn } from "@/lib/utils";
 import "@/app/globals.css";
 
+// ============================================================================
+// SYSTEM FONT ENGINE ARCHITECTURE
+// ============================================================================
+
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-plus-jakarta",
   display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+  adjustFontFallback: true,
 });
 
-// --- ADVANCED SEO & BRANDING ---
+// ============================================================================
+// ADVANCED ENTERPRISE SEO, GRAPH SCHEMA, & APPS PACKAGING
+// ============================================================================
+
+const SERVER_ENV_URL = process.env.NEXT_PUBLIC_APP_URL || "https://moneyplant.dev";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SERVER_ENV_URL),
   title: {
     default: "MoneyPlant 🌿 | Vibe Your Way to Wealth",
     template: "%s | MoneyPlant",
   },
   description: "The gamified, AI-powered expense tracker for Gen Z. Grow your wealth, dodge the Fanum Tax, and level up your life.",
-  keywords: ["Expense Tracker", "Gen Z Finance", "Gamified Savings", "MoneyPlant", "Fintech"],
-  authors: [{ name: "MoneyPlant Team" }],
+  keywords: [
+    "Expense Tracker", 
+    "Gen Z Finance", 
+    "Gamified Savings", 
+    "MoneyPlant", 
+    "Fintech", 
+    "AI Wealth Coach",
+    "Personal Finance Application"
+  ],
+  authors: [{ name: "MoneyPlant Development Team Core", url: SERVER_ENV_URL }],
   creator: "Ananya Sharma",
-  metadataBase: new URL("https://moneyplant.dev"),
-  
+  publisher: "MoneyPlant Technologies Inc.",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://moneyplant.dev",
+    url: SERVER_ENV_URL,
     siteName: "MoneyPlant",
     title: "MoneyPlant 🌿 | Stop Spending, Start Growing",
-    description: "Vibe-coded finance for the next generation.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "MoneyPlant Preview" }],
+    description: "Vibe-coded finance for the next generation. Automate savings, track targets, and level up your strategy.",
+    images: [
+      { 
+        url: "/og-image.png", 
+        width: 1200, 
+        height: 630, 
+        alt: "MoneyPlant Gamified Application Platform Dashboard Workspace" 
+      }
+    ],
   },
-  
   twitter: {
     card: "summary_large_image",
-    title: "MoneyPlant 🌿",
-    description: "Your wealth is a plant. Don't let it wither.",
+    site: "@MoneyPlantDev",
+    creator: "@AnanyaSharma",
+    title: "MoneyPlant 🌿 | Automated Financial Tracking Workspace",
+    description: "Your wealth is a complex ecosystem. Grow your portfolio, compete on leaderboards, and bypass the budget tax.",
     images: ["/og-image.png"],
   },
-
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "MoneyPlant",
   },
+  alternates: {
+    canonical: SERVER_ENV_URL,
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFDF6" },
+    { media: "(prefers-color-scheme: light)", color: "#FDFDFD" },
     { media: "(prefers-color-scheme: dark)", color: "#0C0C0E" },
   ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
 
-export default function RootLayout({
-  children,
-}: {
+// ============================================================================
+// INTERFACE MODULE PROPS
+// ============================================================================
+
+interface RootLayoutProps {
   children: React.ReactNode;
-}) {
+}
+
+// ============================================================================
+// SYSTEM WORKSPACE ROOT ARCHITECTURE
+// ============================================================================
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html 
+      lang="en" 
+      suppressHydrationWarning 
+      className={cn("h-full scroll-smooth", plusJakarta.variable)}
+    >
       <body
         className={cn(
-          "min-h-[100dvh] font-sans antialiased selection:bg-primary/30",
-          "overflow-x-hidden transition-colors duration-500",
-          plusJakarta.variable,
-          "grain-overlay" 
+          "min-h-[100dvh] w-full bg-var(--bg-main) font-sans text-var(--text-main) antialiased",
+          "selection:bg-primary/30 selection:text-var(--text-main)",
+          "overflow-x-hidden grain-overlay transform-gpu"
         )}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          {/* 🎨 GLOBAL BACKGROUND ENGINE */}
-          <div className="vibe-canvas fixed inset-0 z-0" aria-hidden="true" />
+          {/* Dynamic Background Mesh Engine (GPU Accelerated Core Isolation) */}
+          <div 
+            className="vibe-canvas fixed inset-0 pointer-events-none transform-gpu" 
+            aria-hidden="true" 
+          />
 
-          {/* 🚀 MAIN APP STRUCTURE */}
+          {/* Secure NextAuth Identity Validation Engine & Financial Application Context */}
           <AppProviders>
-            <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden">
+            <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden transform-gpu">
               <PageTransition>
-                <main className="flex-1 relative z-10 w-full">{children}</main>
+                <main id="main-content-anchor" role="main" className="flex-1 relative z-10 w-full">
+                  {children}
+                </main>
               </PageTransition>
-              <div className="h-[env(safe-area-inset-bottom)]" />
+              
+              {/* Native iOS/Android Core Navigation Bar Padding Safeguard */}
+              <div className="h-[env(safe-area-inset-bottom)] pointer-events-none w-full" aria-hidden="true" />
             </div>
           </AppProviders>
 
-          {/* 🔔 PREMIUM TOAST NOTIFICATIONS */}
+          {/* Premium High-Contrast Toast Notification Layer Interface */}
           <Toaster 
-            position="top-center" 
+            position="top-center"
+            expand={false}
+            richColors
+            closeButton
             toastOptions={{
-              className: "glass-panel !rounded-[28px] !border-none !shadow-2xl !font-bold !px-6 !py-4",
-              style: { 
-                background: 'rgba(255, 255, 255, 0.4)', 
-                backdropFilter: 'blur(20px)',
-                color: 'var(--text-main)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
+              className: cn(
+                "glass-panel !rounded-[24px] !border border-white/10 !px-6 !py-4 !shadow-2xl",
+                "text-var(--text-main) font-sans font-bold text-sm"
+              ),
+              style: {
+                background: "var(--glass-bg)",
+                backdropFilter: "blur(24px) saturate(190%)",
+                WebkitBackdropFilter: "blur(24px) saturate(190%)"
               }
             }}
           />
         </ThemeProvider>
 
-        {/* 🏗️ SVG RENDERING ENGINE (Effects & Masks) */}
-        <svg className="pointer-events-none absolute h-0 w-0" aria-hidden="true">
+        {/* Dynamic SVG Filter Pipeline Infrastructure */}
+        <svg className="pointer-events-none absolute h-0 w-0 opacity-0 select-none hidden" aria-hidden="true">
           <defs>
             <filter id="noiseFilter">
-              <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+              <feTurbulence type="fractalNoise" baseFrequency="0.80" numOctaves="4" stitchTiles="stitch" />
             </filter>
             <filter id="softGlow">
               <feGaussianBlur stdDeviation="12" result="blur" />

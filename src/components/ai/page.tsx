@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { LogOut, User, Trash2, ShieldAlert, Mail, Phone, Award } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { motion } from "framer-motion";
@@ -35,9 +36,7 @@ export default function ProfilePage() {
     );
 
     if (confirmed) {
-      localStorage.clear();
-      sessionStorage.clear();
-      router.replace("/login");
+      signOut({ callbackUrl: "/login" });
     }
   };
 
