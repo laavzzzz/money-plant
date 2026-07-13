@@ -83,6 +83,14 @@ export default function AddWishlistModal({
   const [error, setError] = useState<string | null>(null);
   const monthOptions = useMemo(() => buildMonthOptions(), []);
 
+  const isFormValid = useMemo(() => {
+    return (
+      form.name.trim().length > 0 &&
+      Number(form.amount) > 0 &&
+      Number(form.monthlySave) >= 0
+    );
+  }, [form.name, form.amount, form.monthlySave]);
+
   useEffect(() => {
     if (open) {
       setForm(emptyForm());
@@ -390,25 +398,35 @@ export default function AddWishlistModal({
                 <p className="text-center text-sm font-bold text-red-500">{error}</p>
               )}
 
-              <motion.button
-                type="button"
-                disabled={saving}
-                onClick={handleSubmit}
-                whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2",
-                  saving ? "bg-text-light/40" : "bg-vibe-purple"
-                )}
-              >
-                {saving ? (
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Sparkles size={18} />
-                    Plant on Wishlist
-                  </>
-                )}
-              </motion.button>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  disabled={saving}
+                  className="flex-1 py-4 rounded-2xl font-black text-text-main bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  type="button"
+                  disabled={saving || !isFormValid}
+                  onClick={handleSubmit}
+                  whileTap={{ scale: 0.98 }}
+                  className={cn(
+                    "flex-[2] py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 transition-opacity",
+                    (saving || !isFormValid) ? "bg-text-light/40 cursor-not-allowed" : "bg-vibe-purple hover:bg-vibe-purple/90"
+                  )}
+                >
+                  {saving ? (
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Sparkles size={18} />
+                      Add to Wishlist
+                    </>
+                  )}
+                </motion.button>
+              </div>
             </div>
           </motion.div>
         </>

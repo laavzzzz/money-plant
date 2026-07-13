@@ -97,7 +97,7 @@ const config: Config = {
         vibe: "0 10px 30px -5px rgba(109, 40, 217, 0.15)",
         "vibe-soft": "0 8px 24px -4px rgba(0, 0, 0, 0.06), 0 4px 12px -2px rgba(0, 0, 0, 0.04)",
         "money-glow": "0 12px 32px -6px rgba(217, 119, 6, 0.25)",
-        float: "0 20px 48px -8px rgba(15, 23, 42, 0.12)",
+        float: "0 20px 48px -8px rgba(219, 221, 226, 0.12)",
         "inner-glass": "inset 0 1px 0 0 rgba(255, 255, 255, 0.6), inset 0 -1px 0 0 rgba(0, 0, 0, 0.04)",
         "inner-glass-dark": "inset 0 1px 0 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 0 rgba(0, 0, 0, 0.6)",
       },

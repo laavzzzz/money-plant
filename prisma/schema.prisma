@@ -1,0 +1,96 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================================================
+// IDENTITY & CUSTOM USER CORE MODEL
+// ============================================================================
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Custom Gamified & Wealth Architecture
+  streakCount Int       @default(0)
+  lastActive  DateTime?
+  experience  Int       @default(0) // Leveling engine currency
+  level       Int       @default(1)
+
+  // Relational Integrity Links
+  accounts     Account[]
+  sessions     Session[]
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+// ============================================================================
+// NEXTAUTH SESSION MATRIX INTEGRATION
+// ============================================================================
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// FINANCIAL & TRANSACTION DATA LEDGER
+// ============================================================================
+model Transaction {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  amount      Float
+  category    String // e.g., "Food", "Subscriptions", "Fanum Tax"
+  type        String // "INCOME" or "EXPENSE"
+  description String?
+  date        DateTime @default(now())
+  isGamified  Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// GAMIFIED BUDGET TARGET ENGINE
+// ============================================================================
+model Budget {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String @db.ObjectId
+  category    String
+  limitAmount Float
+  spentAmount Float  @default(0.0)
+  period      String // "MONTHLY", "WEEKLY"
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, period])
+}

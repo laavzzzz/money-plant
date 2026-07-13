@@ -1,0 +1,23 @@
+.ai-style-change-1 {
+  .select-none& {
+    background-color: rgb(255, 255, 255);
+  }
+}
+.ai-style-change-2 {
+  .selection\:bg-primary\/30& {
+    color: rgb(26, 26, 26);
+  }
+}
+.ai-style-change-3 {
+  .py-20& {
+    background-color: rgb(249, 250, 251);
+    border-top: 1px solid rgb(229, 231, 235);
+  }
+}
+.ai-style-change-4 {
+  .filter& {
+    opacity: 0.7;
+    color: rgb(42, 62, 99);
+    filter: blur(0.2px) brightness(0.8);
+  }
+}

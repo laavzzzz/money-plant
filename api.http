@@ -1,0 +1,47 @@
+### ============================================================================
+### TEST CASE 1: SUCCESSFUL POST (VALID EXPENSE RECORDING)
+### ============================================================================
+POST http://localhost:3000/api/transactions
+Content-Type: application/json
+
+{
+  "title": "Starbucks Coffee",
+  "amount": "12.50",
+  "type": "expense",
+  "category": "Food & Drinks"
+}
+
+###
+
+### ============================================================================
+### TEST CASE 2: SUCCESSFUL GET (FETCH ALL RECORDED ENTRIES)
+### ============================================================================
+GET http://localhost:3000/api/transactions
+
+###
+
+### ============================================================================
+### TEST CASE 3: FAIL CASE (MISSING MANDATORY PAYLOAD FIELDS)
+### ============================================================================
+POST http://localhost:3000/api/transactions
+Content-Type: application/json
+
+{
+  "title": "Gym Membership",
+  "type": "expense"
+}
+
+###
+
+### ============================================================================
+### TEST CASE 4: FAIL CASE (SANITY CHECK NEGATIVE VALUES)
+### ============================================================================
+POST http://localhost:3000/api/transactions
+Content-Type: application/json
+
+{
+  "title": "Hack Attack Payload",
+  "amount": -50.00,
+  "type": "expense",
+  "category": "Testing"
+}

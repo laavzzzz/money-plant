@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     url: SERVER_ENV_URL,
     siteName: "MoneyPlant",
     title: "MoneyPlant 🌿 | Stop Spending, Start Growing",
-    description: "Vibe-coded finance for the next generation. Automate savings, track targets, and level up your strategy.",
+    description: "Finance for the next generation. Automate savings, track targets, and level up your strategy.",
     images: [
       { 
         url: "/og-image.png", 
@@ -93,7 +93,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FDFDFD" },
-    { media: "(prefers-color-scheme: dark)", color: "#0C0C0E" },
+    { media: "(prefers-color-scheme: dark)", color: "#FFFFFF" }, // Locked parameters match light engine constants
   ],
   width: "device-width",
   initialScale: 1,
@@ -119,25 +119,33 @@ export default function RootLayout({ children }: RootLayoutProps) {
       lang="en" 
       suppressHydrationWarning 
       className={cn("h-full scroll-smooth", plusJakarta.variable)}
+      data-theme="light"
     >
       <body
         className={cn(
-          "min-h-[100dvh] w-full bg-var(--bg-main) font-sans text-var(--text-main) antialiased",
-          "selection:bg-primary/30 selection:text-var(--text-main)",
+          "min-h-[100dvh] w-full font-sans antialiased",
+          "selection:bg-cyan-400/20 selection:text-slate-900",
           "overflow-x-hidden grain-overlay transform-gpu"
         )}
+        style={{
+          backgroundColor: "var(--bg-main)",
+          color: "var(--text-body-prose)"
+        }}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem
+          defaultTheme="light"
+          forcedTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {/* Dynamic Background Mesh Engine (GPU Accelerated Core Isolation) */}
-          <div 
-            className="vibe-canvas fixed inset-0 pointer-events-none transform-gpu" 
-            aria-hidden="true" 
-          />
+          <div className="aurora-canvas-container" aria-hidden="true">
+            <div className="glow-top-left-turquoise" />
+            <div className="glow-top-right-cyan" />
+            <div className="glow-bottom-left-mint" />
+            <div className="glow-bottom-right-blue" />
+          </div>
 
           {/* Secure NextAuth Identity Validation Engine & Financial Application Context */}
           <AppProviders>
@@ -160,14 +168,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
             richColors
             closeButton
             toastOptions={{
-              className: cn(
-                "glass-panel !rounded-[24px] !border border-white/10 !px-6 !py-4 !shadow-2xl",
-                "text-var(--text-main) font-sans font-bold text-sm"
-              ),
+              className: "glass-panel !rounded-[24px] !border border-white/80 !px-6 !py-4 !shadow-2xl font-sans font-bold text-sm",
               style: {
                 background: "var(--glass-bg)",
-                backdropFilter: "blur(24px) saturate(190%)",
-                WebkitBackdropFilter: "blur(24px) saturate(190%)"
+                color: "var(--text-navy-deep)",
+                backdropFilter: "var(--glass-blur)",
+                WebkitBackdropFilter: "var(--glass-blur)"
               }
             }}
           />

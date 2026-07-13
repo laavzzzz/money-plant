@@ -25,20 +25,23 @@ type GlassCardProps = {
 } & Omit<HTMLAttributes<HTMLDivElement>, "onAnimationStart"> &
   MotionProps;
 
-/* 🎨 STYLE MAPS */
+/* 🎨 EXACT IMAGE STYLE MAPS (image_b6fb47.jpg Design Tokens) */
 const variantStyles: Record<Variant, string> = {
-  glass: "glass-panel bg-white/65 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10",
+  // Matches the ultra-clean, white frost-refracted layout seen in image_b6fb47.jpg
+  glass: "bg-white/45 backdrop-blur-[24px] border border-white/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] dark:bg-white/5 dark:border-white/10",
   solid: "bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-800",
   outline: "bg-transparent border-2 border-primary/20 dark:border-primary/10",
-  neon: "bg-white/80 dark:bg-black/80 border-2 border-primary/30 shadow-[0_0_20px_rgba(195,172,255,0.2)]",
+  // Upgraded to a bright luminous cyan matching the active glowing targets in the reference picture
+  neon: "bg-white/60 backdrop-blur-md border border-[#35D6FF]/40 shadow-[0_0_25px_rgba(53,214,255,0.15),inset_0_1px_2px_rgba(255,255,255,0.7)]",
 };
 
 const elevationStyles: Record<Elevation, string> = {
   none: "",
   sm: "shadow-sm",
-  md: "shadow-vibe",
-  lg: "shadow-float",
-  vibe: "shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]",
+  // Perfectly mimics the soft, deep volumetric dispersion under the bottom tray
+  md: "shadow-[0_12px_40px_rgba(14,45,104,0.04)]",
+  lg: "shadow-[0_20px_50px_rgba(14,45,104,0.07)]",
+  vibe: "shadow-[0_30px_60px_rgba(14,45,104,0.09)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]",
 };
 
 /* 🎬 PREMIUM MOTION PRESET */
@@ -49,7 +52,7 @@ const motionPreset: MotionProps = {
   transition: {
     type: "spring",
     stiffness: 260,
-    damping: 20,
+    damping: 22,
   },
 };
 
@@ -86,18 +89,18 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
         
         /* ✨ INTERACTION PHYSICS */
         whileHover={hover ? { 
-          y: -6, 
-          scale: 1.01,
-          transition: { type: "spring", stiffness: 400, damping: 10 }
+          y: -4, 
+          scale: 1.005,
+          transition: { type: "spring", stiffness: 400, damping: 15 }
         } : undefined}
-        whileTap={clickable ? { scale: 0.97 } : undefined}
+        whileTap={clickable ? { scale: 0.98 } : undefined}
 
         /* 🎨 DYNAMIC STYLING */
         className={cn(
-          "relative overflow-hidden p-6 rounded-vibe transition-all duration-500",
+          "relative overflow-hidden p-6 rounded-[24px] transition-all duration-500", // Smooth rounded corners matching the bottom dock tray
           variantStyles[variant],
           elevationStyles[elevation],
-          clickable && "cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          clickable && "cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2EE6D6]",
           loading && "pointer-events-none",
           className
         )}
@@ -116,16 +119,16 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-md flex items-center justify-center z-30"
+              className="absolute inset-0 bg-white/50 backdrop-blur-md flex items-center justify-center z-30"
             >
-              <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <div className="w-8 h-8 border-3 border-[#2EE6D6]/30 border-t-[#2EE6D6] rounded-full animate-spin" />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ✨ DYNAMIC LIGHT REFLECTION (The "Lovable" look) */}
+        {/* ✨ DYNAMIC LIGHT REFLECTION (Matches the luminous angle on image_b6fb47.jpg layout edges) */}
         <div 
-          className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10" 
+          className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/30 opacity-60 pointer-events-none z-10" 
           aria-hidden="true"
         />
 
@@ -134,11 +137,11 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
           {children}
         </div>
 
-        {/* 🪄 BACKGROUND ORNAMENT (Subtle Glow) */}
+        {/* 🪄 BACKGROUND ORNAMENT (Soft Radiant Core Ambient Backlight) */}
         {variant === 'neon' && (
            <div 
-            className="absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-20 pointer-events-none rounded-full"
-            style={{ backgroundColor: glowColor || 'var(--primary)' }}
+            className="absolute -right-6 -top-6 w-32 h-32 blur-2xl opacity-25 pointer-events-none rounded-full"
+            style={{ backgroundColor: glowColor || '#35D6FF' }}
            />
         )}
       </motion.div>
