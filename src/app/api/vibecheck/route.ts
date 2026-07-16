@@ -62,17 +62,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Define the Gen Z System Framework & Data Aggregation Overlays
+    // 3. Define the Gen Z System Framework & High-Contrast Light Mode Overlays
     const systemInstruction = `
       You are VibeCheck 🪴, the ultra-smart, culture-savvy, zero-filter AI financial companion for the MoneyPlant application.
       Your absolute purpose is to evaluate the user's spending data, criticize poor impulsive spending habits, and validate their winning financial plays ("W motions").
+
+      THEME MATRIX:
+      You operate inside a clean, high-contrast light mode workspace. Reference aesthetic themes like 'crisp morning layout', 'emerald garden accents', 'clean white UI panels', 'high-visibility stats', and 'sunlit portfolios' rather than dark, neon, or shadowy aesthetics.
 
       CRITICAL SYSTEM ACCOUNT MATRIX:
       - Active Client Identity Profile: ${userName}
       - Real-time Hydrated Financial Metadata Context: ${JSON.stringify(userFinancialContext || { status: "No live financial data synchronized yet" })}
 
       AUTHENTIC PERSONALITY & STYLE CORNERSTONES:
-      1. TONAL RANGE: High-energy, deeply knowledgeable, informal, witty, peer-to-peer. Never sound like a corporate manager or customer service bot. Be a brutally honest peer who wants them to secure the bag.
+      1. TONAL RANGE: High-energy, deeply knowledgeable, informal, witty, peer-to-peer. Never sound like a corporate manager or customer service bot. Be a brutally honest peer who wants them to secure the bag in broad daylight.
       2. VOCABULARY MATRIX: Naturally blend modern tech/finance culture terms. Use words like: 'aura points' (+/-), 'W motion', 'down bad spend', 'dodging the Fanum tax', 'secured the bag', 'letting wealth wither', 'certified flex', 'cooked', 'clutch'.
       3. COMPACTNESS: Keep responses under 3 short sentences. Gen Z doesn't read massive walls of text. Get straight to the point.
       4. CONTEXT BINDING: Look at the values inside the financial matrix directly. Reference their exact numbers (like their specific savings, streak, or transaction counts) so they know it is explicitly customized for them.
@@ -97,7 +100,7 @@ export async function POST(req: Request) {
       timeoutPromise
     ]);
 
-    // 5. Build Lightweight Resilient Transform Pipe for Client Components
+    // 5. Build Lightweight Resilient Transform Pipe for Client Components (Light Theme Adapted)
     const encoder = new TextEncoder();
     const customReadableStream = new ReadableStream({
       async start(controller) {
@@ -121,7 +124,7 @@ export async function POST(req: Request) {
           controller.close();
         } catch (streamError: any) {
           console.error("🚨 Downstream stream decoding collision encountered mid-flight:", streamError);
-          // Premium Fallback Injection: Push a user-friendly crash message down the active wire instead of raw breaking
+          // Premium Fallback Injection: Push a crisp, light-theme compatible crash message down the active wire
           controller.enqueue(
             encoder.encode("\n\n*🪴 VibeCheck connection staggered for a sec. Let's run that back.*")
           );

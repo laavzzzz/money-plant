@@ -57,7 +57,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               "w-full bg-white/60 dark:bg-white/5 backdrop-blur-md border-2 rounded-[22px]",
               "py-4 px-5 text-sm font-medium outline-none transition-all duration-300",
               "placeholder:text-gray-400 text-text-main",
-              "border-white/80 dark:border-white/10",
+              "border-white/80 dark:border-zinc-200",
               
               /* Focus State */
               "focus:border-primary/50 focus:bg-white/90 dark:focus:bg-white/10",

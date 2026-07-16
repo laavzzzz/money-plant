@@ -28,7 +28,7 @@ type GlassCardProps = {
 /* 🎨 EXACT IMAGE STYLE MAPS (image_b6fb47.jpg Design Tokens) */
 const variantStyles: Record<Variant, string> = {
   // Matches the ultra-clean, white frost-refracted layout seen in image_b6fb47.jpg
-  glass: "bg-white/45 backdrop-blur-[24px] border border-white/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] dark:bg-white/5 dark:border-white/10",
+  glass: "bg-white/45 backdrop-blur-[24px] border border-white/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] dark:bg-white/5 dark:border-zinc-200",
   solid: "bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-800",
   outline: "bg-transparent border-2 border-primary/20 dark:border-primary/10",
   // Upgraded to a bright luminous cyan matching the active glowing targets in the reference picture

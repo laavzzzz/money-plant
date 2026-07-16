@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useFinanceContext } from "@/components/providers/FinanceProvider";
 
-function generateId() {
+function generateId(): string {
   return Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
 }
 
@@ -151,7 +151,7 @@ export default function VibeCheck() {
     abortControllerRef.current = new AbortController();
 
     try {
-      // 🔌 Connected to your high-performance vibecheck route
+      // Connected to your high-performance vibecheck route
       const response = await fetch("/api/vibecheck", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -212,7 +212,7 @@ export default function VibeCheck() {
       // Flush residual decoder state
       decoder.decode(new Uint8Array(), { stream: false });
 
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       const errText = err instanceof Error ? err.message : "Network protocol collision. Check pipeline connection.";
       
@@ -264,7 +264,7 @@ export default function VibeCheck() {
         elements = parts.map((part, index) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return (
-              <strong key={index} className="font-extrabold text-white underline decoration-yellow-400/40 decoration-2">
+              <strong key={index} className="font-extrabold text-zinc-900 underline decoration-yellow-400/40 decoration-2">
                 {part.slice(2, -2)}
               </strong>
             );
@@ -290,7 +290,7 @@ export default function VibeCheck() {
     });
   };
 
-  if (HIDDEN_PATHS.includes(pathname)) {
+  if (pathname && HIDDEN_PATHS.includes(pathname)) {
     return null;
   }
 
@@ -329,17 +329,17 @@ export default function VibeCheck() {
             }}
             exit={{ opacity: 0, y: 60, scale: 0.88 }}
             transition={{ type: "spring", damping: 26, stiffness: 220 }}
-            className="fixed inset-x-3 bottom-28 z-[101] flex flex-col overflow-hidden rounded-[32px] border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.5)] ring-1 ring-white/10 glass-panel sm:inset-x-auto sm:right-6 lg:bottom-8 bg-[#0C0C0E]/90 backdrop-blur-3xl"
+            className="fixed inset-x-3 bottom-28 z-[101] flex flex-col overflow-hidden rounded-[32px] border border-zinc-200 shadow-[0_40px_80px_rgba(0,0,0,0.5)] ring-1 ring-white/10 glass-panel sm:inset-x-auto sm:right-6 lg:bottom-8 bg-white shadow-2xl "
           >
             {/* Header Control Container */}
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:px-5 sm:py-4">
+            <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50 p-4 backdrop-blur-xl sm:px-5 sm:py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-yellow-500/20 bg-yellow-500/10 shadow-inner">
                   <MessageCircle size={24} className="text-yellow-400" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-black text-base tracking-tight text-white">VibeCheck AI</h3>
+                    <h3 className="font-black text-base tracking-tight text-zinc-900">VibeCheck AI</h3>
                     <span className="bg-yellow-400/20 border border-yellow-400/30 text-yellow-400 px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-widest uppercase">PREMIUM</span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
@@ -351,7 +351,7 @@ export default function VibeCheck() {
                           : "bg-green-500 ring-green-500/20"
                       )}
                     />
-                    <span className="text-[9px] font-black uppercase tracking-wider text-white/50">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-zinc-900/50">
                       {isLoading ? "Streaming Matrix Context..." : "Secure Ledger Pipeline Synced"}
                     </span>
                   </div>
@@ -363,21 +363,21 @@ export default function VibeCheck() {
                 <button
                   onClick={() => setIsExpanded((prev) => !prev)}
                   aria-label={isExpanded ? "Collapse panel" : "Expand panel"}
-                  className="hidden sm:flex rounded-xl p-2 text-white/40 transition-all hover:bg-white/10 hover:text-white"
+                  className="hidden sm:flex rounded-xl p-2 text-zinc-900/40 transition-all hover:bg-white/10 hover:text-zinc-900"
                 >
                   {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                 </button>
                 <button
                   onClick={clearChat}
                   aria-label="Clear context session history"
-                  className="rounded-xl p-2 text-white/40 transition-all hover:bg-white/10 hover:text-red-400"
+                  className="rounded-xl p-2 text-zinc-900/40 transition-all hover:bg-white/10 hover:text-red-400"
                 >
                   <Trash2 size={16} />
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
                   aria-label="Close terminal view"
-                  className="rounded-xl p-2 transition-all hover:bg-white/10 text-white/60 hover:text-white"
+                  className="rounded-xl p-2 transition-all hover:bg-white/10 text-zinc-900/60 hover:text-zinc-900"
                 >
                   <ChevronDown size={22} />
                 </button>
@@ -392,7 +392,7 @@ export default function VibeCheck() {
                   type="button"
                   disabled={isLoading}
                   onClick={() => handleQuickPrompt(item)}
-                  className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider transition-all duration-200 hover:bg-yellow-400 hover:text-black hover:border-transparent disabled:opacity-40 shadow-sm"
+                  className="shrink-0 rounded-full border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider transition-all duration-200 hover:bg-yellow-400 hover:text-black hover:border-transparent disabled:opacity-40 shadow-sm"
                 >
                   {item.label}
                 </button>
@@ -402,7 +402,7 @@ export default function VibeCheck() {
             {/* Message Thread Scrollport */}
             <div
               ref={scrollAreaRef}
-              className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto bg-black/20 p-4 sm:space-y-6 sm:p-5"
+              className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto bg-white border border-zinc-200 p-4 sm:space-y-6 sm:p-5"
             >
               {messages.map((msg) => (
                 <motion.div
@@ -419,7 +419,7 @@ export default function VibeCheck() {
                         ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-black font-semibold border-white/20 rounded-tr-none shadow-yellow-400/10"
                         : msg.isError 
                         ? "bg-red-500/10 border-red-500/20 text-red-400 rounded-tl-none flex items-start gap-2"
-                        : "bg-white/[0.03] border-white/10 text-white/90 rounded-tl-none"
+                        : "bg-white/[0.03] border-zinc-200 text-zinc-900/90 rounded-tl-none"
                     )}
                   >
                     {msg.isError && <AlertCircle size={16} className="mt-0.5 shrink-0" />}
@@ -438,10 +438,10 @@ export default function VibeCheck() {
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex w-fit items-center gap-2.5 rounded-2xl border border-white/5 bg-white/5 px-4 py-3 shadow-2xl"
+                  className="flex w-fit items-center gap-2.5 rounded-2xl border border-white/5 bg-zinc-50 px-4 py-3 shadow-2xl"
                 >
                   <Zap size={14} className="text-yellow-400 fill-yellow-400 animate-pulse" />
-                  <span className="text-[10px] font-black tracking-widest text-white/60 uppercase">
+                  <span className="text-[10px] font-black tracking-widest text-zinc-900/60 uppercase">
                     Compiling Financial Vectors...
                   </span>
                 </motion.div>
@@ -451,7 +451,7 @@ export default function VibeCheck() {
             {/* Data Submission Command Deck */}
             <form
               onSubmit={handleSendMessage}
-              className="shrink-0 border-t border-white/10 bg-[#0C0C0E]/95 p-4 backdrop-blur-2xl sm:p-5"
+              className="shrink-0 border-t border-zinc-200 bg-white shadow-2xl sm:p-5"
             >
               <div className="relative flex items-center">
                 <input
@@ -460,13 +460,13 @@ export default function VibeCheck() {
                   aria-label="Direct text prompt transmission stream input"
                   placeholder="Query cash trends, goal forecasting, safety values..."
                   disabled={isLoading}
-                  className="w-full rounded-[24px] border border-white/10 bg-white/5 py-4 pl-5 pr-14 text-sm font-semibold text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-transparent disabled:opacity-50 transition-all duration-300"
+                  className="w-full rounded-[24px] border border-zinc-200 bg-zinc-50 py-4 pl-5 pr-14 text-sm font-semibold text-zinc-900 placeholder:text-zinc-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-transparent disabled:opacity-50 transition-all duration-300"
                 />
                 <button
                   type="submit"
                   aria-label="Transmit prompt data to AI"
                   disabled={!input.trim() || isLoading}
-                  className="absolute right-2.5 rounded-2xl bg-yellow-400 p-2.5 text-black transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-10 disabled:hover:scale-100"
+                  className="absolute right-2.5 rounded-2xl bg-yellow-400 p-2.5 text-black transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
                 >
                   <Send size={18} className="stroke-[2.5]" />
                 </button>
@@ -475,12 +475,12 @@ export default function VibeCheck() {
               {/* Terminal System Footer Metadata */}
               <div className="pointer-events-none mt-3.5 flex justify-center gap-5 opacity-20">
                 <div className="flex items-center gap-1.5">
-                  <TrendingUp size={11} className="text-white" />
-                  <span className="text-[8px] font-black tracking-widest uppercase text-white">Gemini 2.5 Flash Stream</span>
+                  <TrendingUp size={11} className="text-zinc-900" />
+                  <span className="text-[8px] font-black tracking-widest uppercase text-zinc-900">Gemini 2.5 Flash Stream</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <MessageSquare size={11} className="text-white" />
-                  <span className="text-[8px] font-black tracking-widest uppercase text-white">Isolated Context Ledger</span>
+                  <MessageSquare size={11} className="text-zinc-900" />
+                  <span className="text-[8px] font-black tracking-widest uppercase text-zinc-900">Isolated Context Ledger</span>
                 </div>
               </div>
             </form>

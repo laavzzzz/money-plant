@@ -7,7 +7,8 @@ import Button from "@/components/ui/Button";
 import { motion } from "framer-motion";
 import { useFinanceContext } from "@/components/providers/FinanceProvider";
 
-const getSavingsTitle = (savings: number, income: number) => {
+// Determine the gamified rank based on savings rate
+const getSavingsTitle = (savings: number, income: number): string => {
   if (income <= 0) return "🌱 Budget Rookie";
   const percentage = (savings / income) * 100;
   
@@ -22,7 +23,6 @@ const getSavingsTitle = (savings: number, income: number) => {
   if (percentage < 75) return "🔥 Wealth Wizard";
   return "🌳 MoneyPlant Legend";
 };
-
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -46,7 +46,10 @@ export default function ProfilePage() {
     );
 
     if (firstConfirm) {
-      const secondConfirm = window.confirm("FINAL WARNING: This action CANNOT be undone. Proceed with deletion?");
+      const secondConfirm = window.confirm(
+        "FINAL WARNING: This action CANNOT be undone. Proceed with deletion?"
+      );
+      
       if (secondConfirm) {
         try {
           const response = await fetch("/api/user", {
@@ -62,14 +65,15 @@ export default function ProfilePage() {
             throw new Error(data.error || "Failed to delete account");
           }
 
-          // Clear local state and redirect upon successful deletion
+          // Clear session stores and redirect on success
           localStorage.clear();
           sessionStorage.clear();
           router.replace("/login");
           alert("Your account and all associated data have been permanently deleted.");
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Account deletion failed:", error);
-          alert(error.message || "An unexpected error occurred. Please try again.");
+          const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+          alert(errorMessage || "Please try again.");
         }
       }
     }
@@ -96,64 +100,93 @@ export default function ProfilePage() {
         animate={{ opacity: 1, y: 0 }}
         className="glass-panel p-6 sm:p-8 space-y-8"
       >
-        {/* User Identity Section */}
+        {/* User Identity Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 flex flex-col gap-3 min-w-0 overflow-hidden">
+          {/* Savings Rank Card */}
+          <div className="p-5 rounded-[24px] bg-zinc-50 border border-zinc-200 flex flex-col gap-3 min-w-0 overflow-hidden">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Award size={20} className="text-primary" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Savings Rank</p>
-              <p className="font-bold text-lg text-text-main truncate">{savingsTitle}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">
+                Savings Rank
+              </p>
+              <p className="font-bold text-lg text-text-main truncate">
+                {savingsTitle}
+              </p>
             </div>
           </div>
 
-          <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 flex flex-col gap-3 min-w-0 overflow-hidden">
+          {/* Email Card */}
+          <div className="p-5 rounded-[24px] bg-zinc-50 border border-zinc-200 flex flex-col gap-3 min-w-0 overflow-hidden">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Mail size={20} className="text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Email Address</p>
-              <p className="font-bold text-text-main truncate leading-tight" title={profile?.email || "Not provided"}>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">
+                Email Address
+              </p>
+              <p 
+                className="font-bold text-text-main truncate leading-tight" 
+                title={profile?.email || "Not provided"}
+              >
                 {profile?.email || "Not provided"}
               </p>
             </div>
           </div>
 
-          <div className="p-5 rounded-[24px] bg-white/5 border border-white/10 flex flex-col gap-3 min-w-0 overflow-hidden">
+          {/* Phone Card */}
+          <div className="p-5 rounded-[24px] bg-zinc-50 border border-zinc-200 flex flex-col gap-3 min-w-0 overflow-hidden">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Phone size={20} className="text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Verified Phone</p>
-              <p className="font-bold text-text-main truncate">{profile?.phone || "Not linked"}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">
+                Verified Phone
+              </p>
+              <p className="font-bold text-text-main truncate">
+                {profile?.phone || "Not linked"}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-white/10 space-y-4">
-          <h3 className="text-sm font-black uppercase tracking-widest text-text-main">Session Management</h3>
-          <div className="flex flex-col gap-4">
-            <Button
-              onClick={handleLogout}
-              leftIcon={<LogOut size={18} />}
-              className="w-full sm:w-fit !bg-red-500 hover:!bg-red-600 !text-white !border-none shadow-lg shadow-red-500/20 font-bold transition-all active:scale-95"
-            >
-              Log Out
-            </Button>
+        {/* Action Sections */}
+        <div className="pt-6 border-t border-zinc-200 space-y-6">
+          {/* Session Management */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black uppercase tracking-widest text-text-main">
+              Session Management
+            </h3>
+            <div className="flex flex-col gap-4">
+              <Button
+                onClick={handleLogout}
+                leftIcon={<LogOut size={18} />}
+                className="w-full sm:w-fit !bg-red-500 hover:!bg-red-600 !text-zinc-900 !border-none shadow-lg shadow-red-500/20 font-bold transition-all active:scale-95"
+              >
+                Log Out
+              </Button>
+            </div>
           </div>
 
-          <div className="pt-6 border-t border-white/10 flex flex-col gap-4">
-            <div className="space-y-1">
-              <h3 className="text-sm font-black uppercase tracking-widest text-red-500">Danger Zone</h3>
-              <p className="text-sm text-text-light">
+          {/* Danger Zone */}
+          <div className="pt-6 border-t border-zinc-200 flex flex-col gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-red-500">
+                <ShieldAlert size={18} />
+                <h3 className="text-sm font-black uppercase tracking-widest">
+                  Danger Zone
+                </h3>
+              </div>
+              <p className="text-sm text-text-light leading-relaxed">
                 Permanently remove your account and all associated data from the MoneyPlant database.
               </p>
             </div>
+            
             <Button
               onClick={handleDeleteAccount}
               leftIcon={<Trash2 size={18} />}
-              className="w-full sm:w-fit !bg-red-500 hover:!bg-red-600 !text-white !border-none shadow-lg shadow-red-500/20 font-bold transition-all active:scale-95"
+              className="w-full sm:w-fit !bg-red-500 hover:!bg-red-600 !text-zinc-900 !border-none shadow-lg shadow-red-500/20 font-bold transition-all active:scale-95"
             >
               Delete Account
             </Button>

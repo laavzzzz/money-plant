@@ -455,6 +455,7 @@
     background-color: rgb(255, 255, 255) !important;
   }
 
+  /* Corrected CSS selector escaping for: selection:bg-primary/30 */
   .selection\:bg-primary\/30 {
     color: rgb(26, 26, 26) !important;
   }
@@ -487,10 +488,12 @@
     color: var(--text-navy-deep) !important;
   }
 
+  /* Corrected CSS selector escaping for: text-white/90, text-white/80, text-white/70 */
   .text-white\/90, .text-white\/80, .text-white\/70, .text-zinc-400, .text-slate-400, .text-gray-400, .text-neutral-400, .text-muted-foreground {
     color: var(--text-body-prose) !important;
   }
 
+  /* Corrected CSS selector escaping for: text-white/60, text-white/50 */
   .text-white\/60, .text-white\/50, .text-zinc-500, .text-slate-500, .text-gray-500, .text-neutral-500 {
     color: var(--text-muted-meta) !important;
   }

@@ -82,7 +82,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default", // Changed from black-translucent to clear light default
     title: "MoneyPlant",
   },
   alternates: {
@@ -93,7 +93,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FDFDFD" },
-    { media: "(prefers-color-scheme: dark)", color: "#FFFFFF" }, // Locked parameters match light engine constants
+    { media: "(prefers-color-scheme: dark)", color: "#FDFDFD" }, // Locked parameters to light engine constants
   ],
   width: "device-width",
   initialScale: 1,
@@ -120,22 +120,23 @@ export default function RootLayout({ children }: RootLayoutProps) {
       suppressHydrationWarning 
       className={cn("h-full scroll-smooth", plusJakarta.variable)}
       data-theme="light"
+      style={{ colorScheme: "light" }} // Hard-locks client rendering engines to light mode
     >
       <body
         className={cn(
           "min-h-[100dvh] w-full font-sans antialiased",
-          "selection:bg-cyan-400/20 selection:text-slate-900",
+          "selection:bg-yellow-200 selection:text-slate-900",
           "overflow-x-hidden grain-overlay transform-gpu"
         )}
         style={{
-          backgroundColor: "var(--bg-main)",
-          color: "var(--text-body-prose)"
+          backgroundColor: "var(--bg-main, #FFFFFF)", // Clean white fallback if global CSS variable fails
+          color: "var(--text-body-prose, #111827)"     // Safe charcoal gray fallback (Slate-900 equivalent)
         }}
       >
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
-          forcedTheme="light"
+          forcedTheme="light" // Hard-locks the next-themes provider to never default to dark mode
           enableSystem={false}
           disableTransitionOnChange
         >
@@ -149,9 +150,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
           {/* Secure NextAuth Identity Validation Engine & Financial Application Context */}
           <AppProviders>
-            <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden transform-gpu">
+            <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden transform-gpu bg-white">
               <PageTransition>
-                <main id="main-content-anchor" role="main" className="flex-1 relative z-10 w-full">
+                <main id="main-content-anchor" role="main" className="flex-1 relative z-10 w-full text-slate-900">
                   {children}
                 </main>
               </PageTransition>
@@ -168,12 +169,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
             richColors
             closeButton
             toastOptions={{
-              className: "glass-panel !rounded-[24px] !border border-white/80 !px-6 !py-4 !shadow-2xl font-sans font-bold text-sm",
+              className: "glass-panel !rounded-[24px] !border border-gray-200 !px-6 !py-4 !shadow-2xl font-sans font-bold text-sm",
               style: {
-                background: "var(--glass-bg)",
-                color: "var(--text-navy-deep)",
-                backdropFilter: "var(--glass-blur)",
-                WebkitBackdropFilter: "var(--glass-blur)"
+                background: "rgba(255, 255, 255, 0.9)", // Rigid clean white background
+                color: "#111827",                       // High-visibility slate/charcoal text
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)"
               }
             }}
           />

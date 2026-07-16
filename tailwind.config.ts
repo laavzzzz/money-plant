@@ -20,23 +20,23 @@ const config: Config = {
           purple: {
             DEFAULT: "#C3ACFF",
             dark: "#9066FF",
-            light: "#E1D6FF"
+            light: "#E1D6FF",
           },
           pink: {
             DEFAULT: "#FFB5E8",
-            dark: "#FF6BCE"
+            dark: "#FF6BCE",
           },
           blue: {
             DEFAULT: "#ACE7FF",
-            dark: "#57CEFF"
+            dark: "#57CEFF",
           },
           mint: {
             DEFAULT: "#B2F2BB",
-            dark: "#2B8A3E"
+            dark: "#2B8A3E",
           },
           yellow: {
             DEFAULT: "#FFF1AC", // Brand "Money Yellow" baseline
-            dark: "#E5C100"
+            dark: "#E5C100",
           },
           dark: "#0F0F11",
           // Enhanced opacity indexes to block component background bleed-through
@@ -54,7 +54,7 @@ const config: Config = {
         secondary: {
           DEFAULT: "#FFB5E8",
           dark: "#DB2777",
-          foreground: "#1F2937"
+          foreground: "#1F2937",
         },
         accent: {
           DEFAULT: "#FFF1AC",
@@ -63,11 +63,11 @@ const config: Config = {
         money: {
           yellow: {
             DEFAULT: "#FFF1AC",
-            text: "#78350F"
+            text: "#78350F",
           },
           green: {
             DEFAULT: "#B2F2BB",
-            text: "#064E3B"
+            text: "#064E3B",
           },
         },
         // 👁️ CRITICAL READABILITY FIX: High contrast typography matrix
@@ -80,8 +80,8 @@ const config: Config = {
         danger: {
           DEFAULT: "#EF4444", // Refactored high-visibility warning standard
           light: "#FF9B9B",
-          dark: "#7F1D1D"
-        }
+          dark: "#7F1D1D",
+        },
       },
 
       // 🔲 RADIUS LAYOUT MATRIX
