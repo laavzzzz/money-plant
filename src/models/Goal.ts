@@ -1,21 +1,51 @@
-import mongoose, { Schema, models, model } from "mongoose";
+import mongoose, { Schema, models, model, Document } from "mongoose";
 
-const GoalSchema = new Schema(
+export interface IGoal extends Document {
+  userId: mongoose.Types.ObjectId;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const GoalSchema = new Schema<IGoal>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-
-    title: { type: String, required: true },
-    targetAmount: { type: Number, required: true },
-    currentAmount: { type: Number, default: 0 },
-
-    deadline: { type: Date },
+    title: { 
+      type: String, 
+      required: [true, "Goal title is required"], 
+      trim: true 
+    },
+    targetAmount: { 
+      type: Number, 
+      required: [true, "Target amount is required"],
+      min: [0, "Target cannot be negative"]
+    },
+    currentAmount: { 
+      type: Number, 
+      default: 0,
+      min: [0, "Current progress cannot be negative"]
+    },
+    deadline: { 
+      type: Date 
+    },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
 
+// Performance Indexing for lightning fast user goal retrieval
+GoalSchema.index({ userId: 1 });
+GoalSchema.index({ deadline: 1 });
+
 export const Goal =
-  models.Goal || model("Goal", GoalSchema);
+  models.Goal || model<IGoal>("Goal", GoalSchema);

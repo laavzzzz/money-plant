@@ -2,12 +2,14 @@ import NextAuth from "next-auth";
 import { authOptions } from "./options";
 import { NextRequest } from "next/server";
 
+// Define the exact type contract required by Next.js 15 for dynamic route parameters
 interface RouteContext {
-  params: Promise<{ nextauth: string[] }> | { nextauth: string[] };
+  params: Promise<{ nextauth: string[] }>;
 }
 
 /**
  * Advanced Execution Wrapper for NextAuth initialization.
+ * Fully compliant with Next.js 15 async params lifecycle regulations.
  * Intercepts incoming HTTP requests to handle structured logging,
  * telemetry diagnostics, and production runtime error tracking.
  */
@@ -26,8 +28,17 @@ const authHandler = async (
   );
 
   try {
-    // Pass standard Web Request and Route context safely to NextAuth engine
-    const response = await NextAuth(authOptions)(req, ctx);
+    // Next.js 15 requires awaiting dynamic route params before consumption
+    const resolvedParams = await ctx.params;
+    
+    // Construct a Next.js 15 safe context layout to feed downstream
+    const resolvedContext = {
+      params: resolvedParams
+    };
+
+    // Pass standard Web Request and resolved dynamic route context safely to NextAuth engine
+    const nextAuthRunner = NextAuth(authOptions);
+    const response = await nextAuthRunner(req, resolvedContext);
     
     // Ensure NextAuth returned a valid web Response element before passing downstream
     if (!(response instanceof Response)) {

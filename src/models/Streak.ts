@@ -44,7 +44,7 @@ const StreakSchema = new Schema<IStreak>(
 );
 
 /* ⚡ INDEXES (PERFORMANCE) */
-StreakSchema.index({ userId: 1 });
+
 
 /* 🚀 STATIC METHOD: UPDATE STREAK */
 StreakSchema.statics.updateStreak = async function (userId: string) {

@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI, Content } from "@google/generative-ai";
 import { formatSnapshotForPrompt, type FinanceSnapshot } from "@/lib/vibe-check";
 
 export const runtime = "edge";
@@ -6,9 +5,15 @@ export const maxDuration = 30;
 
 type ChatMessage = { role: string; content: string };
 
+interface GeminiContent {
+  role: "user" | "model";
+  parts: { text: string }[];
+}
+
 export async function POST(req: Request) {
   try {
-    if (!process.env.GEMINI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return Response.json(
         {
           error: "missing_api_key",
@@ -55,9 +60,8 @@ RULES:
 LIVE USER DATA:
 ${contextBlock}`;
 
-    // Filter and map incoming messages to Gemini Content schema
-    // Note: Gemini API requires 'model' instead of 'assistant'
-    const chatMessages: Content[] = (messages ?? [])
+    // Map message history cleanly into the raw Gemini JSON API format
+    const chatMessages: GeminiContent[] = (messages ?? [])
       .filter(
         (m) =>
           (m.role === "user" || m.role === "assistant") &&
@@ -76,36 +80,69 @@ ${contextBlock}`;
       );
     }
 
-    // Initialize the official Google Generative AI SDK
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      systemInstruction: systemPrompt
-    });
+    // Hit the official Google Gemini Server SSE endpoint directly
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: chatMessages,
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+          },
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 600,
+          },
+        }),
+      }
+    );
 
-    // Request stream directly from Gemini
-    const resultStream = await model.generateContentStream({
-      contents: chatMessages,
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 600,
-      },
-    });
+    if (!response.ok || !response.body) {
+      const errorText = await response.text();
+      console.error("Gemini API HTTP Error:", errorText);
+      throw new Error(`Gemini server responded with status ${response.status}`);
+    }
 
-    // Pipe the response stream chunk-by-chunk back to your VibeCheck front-end
+    // Stream transformation parsing the incoming text/event-stream down to clean client fragments
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
     const encoder = new TextEncoder();
+    
+    let buffer = "";
+
     const customReadableStream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of resultStream.stream) {
-            const chunkText = chunk.text();
-            if (chunkText) {
-              controller.enqueue(encoder.encode(chunkText));
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Look for standard SSE or stream chunk arrays returned by Gemini
+            // Gemini streams return arrays or chunks wrapped in structures like `,\n{ ... }` or `[ ... ]`
+            let match;
+            while ((match = buffer.match(/("text"\s*:\s*"([^"\\]|\\.)*")/g))) {
+              // Extract text cleanly by locating actual candidate values out of tokens
+              const firstMatch = match[0];
+              const textValue = JSON.parse(`{${firstMatch}}`).text;
+              
+              if (textValue) {
+                controller.enqueue(encoder.encode(textValue));
+              }
+              
+              // Evict processed text matching segment from our buffer safely
+              const index = buffer.indexOf(firstMatch);
+              buffer = buffer.substring(index + firstMatch.length);
             }
           }
           controller.close();
         } catch (streamError) {
           controller.error(streamError);
+        } finally {
+          reader.releaseLock();
         }
       },
     });
@@ -123,7 +160,7 @@ ${contextBlock}`;
       {
         error: "ai_failed",
         message:
-          "VibeCheck AI hit a brief snag in the Gemini system. Check your API key and try again in a moment.",
+          "VibeCheck AI hit a brief snag in the direct Gemini link. Check your API key and try again in a moment.",
       },
       { status: 500 }
     );

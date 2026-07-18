@@ -190,11 +190,11 @@ export default function LoginPage() {
         updateState({ success: "Account database profile established! Moving to secure routing..." });
         
         const loginResult = await signIn("credentials", {
-          redirect: false,
-          identifier,
-          password: fields.password,
-          callbackUrl: "/dashboard",
-        });
+  redirect: false,
+  email: fields.email.trim().toLowerCase(),
+  password: fields.password,
+  callbackUrl: "/dashboard",
+});
 
         if (loginResult?.error) {
           updateState({ error: "Profile saved, but session allocation halted.", isSubmitting: false });
@@ -202,11 +202,11 @@ export default function LoginPage() {
         }
       } else {
         const loginResult = await signIn("credentials", {
-          redirect: false,
-          identifier,
-          password: fields.password,
-          callbackUrl: "/dashboard",
-        });
+  redirect: false,
+  email: fields.email.trim().toLowerCase(),
+  password: fields.password,
+  callbackUrl: "/dashboard",
+});
 
         if (loginResult?.error) {
           updateState({ error: "Invalid credential parameters for targeted matrix profile.", isSubmitting: false });

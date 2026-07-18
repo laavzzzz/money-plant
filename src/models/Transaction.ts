@@ -1,6 +1,5 @@
 import mongoose, { Schema, models, model } from "mongoose";
 
-// Define TypeScript interface for absolute type safety across your application
 export interface ITransaction extends mongoose.Document {
   userId?: mongoose.Types.ObjectId;
   title: string;
@@ -17,7 +16,7 @@ const TransactionSchema = new Schema<ITransaction>(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false, // ✅ Set to false so local testing/mock users don't break your server
+      required: false, // Set to false so local testing/mock users don't break your server
     },
     title: { 
       type: String, 
@@ -49,7 +48,6 @@ const TransactionSchema = new Schema<ITransaction>(
   },
   { 
     timestamps: true,
-    // Ensures clean JSON parsing when transforming database records for Next.js API responses
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
   }
