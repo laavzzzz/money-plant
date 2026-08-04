@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+  memo,
+} from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
   Zap,
   Send,
   ChevronDown,
@@ -15,280 +21,559 @@ import {
   Maximize2,
   Minimize2,
   AlertCircle,
+  Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinanceContext } from "@/components/providers/FinanceProvider";
+import FloatingButton from "@/components/ai/FloatingButton";
 
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+// ============================================================================
+// TYPE DEFINITIONS & DOMAIN MODELS
+// ============================================================================
+
+export type MessageRole = "user" | "assistant";
+
+export interface ChatMessage {
+  readonly id: string;
+  readonly role: MessageRole;
+  readonly content: string;
+  readonly timestamp: number;
+  readonly isError?: boolean;
 }
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  isError?: boolean;
+export interface QuickPromptItem {
+  readonly label: string;
+  readonly query?: string;
+  readonly href?: string;
 }
 
-const HIDDEN_PATHS = ["/", "/login"];
-const withDashboardPath = (href: string) => `/dashboard${href}`;
+export interface ContextPayload {
+  readonly pathname: string;
+  readonly profile: Record<string, unknown>;
+  readonly income: number;
+  readonly expense: number;
+  readonly savings: number;
+  readonly safeToSpend: number;
+  readonly plantStage: Record<string, unknown>;
+  readonly plantStatus: string;
+  readonly streak: number;
+  readonly categoryTotals: Record<string, number>;
+  readonly recentTransactions: readonly unknown[];
+  readonly transactionCount: number;
+}
 
-const QUICK_PROMPTS: Array<{
-  label: string;
-  query?: string;
-  href?: string;
-}> = [
-  { label: "Spending Vibe", query: "Analyze my spending. How much am I dropping on 'Subscriptions' and 'Food' specifically?" },
-  { label: "Safe to spend", query: "How much can I safely spend right now based on my income and expenses?" },
-  { label: "Income Mix", query: "What is my income split between Salary and Freelance/Side-hustles?" },
-  { label: "Manifest Goal", query: "How close am I to my Dream Vault goals? Give me a timeline based on my current streak." },
-  { label: "7-day plan", query: "Make me a practical 7-day saving plan from my current money data." },
-  { label: "Can I buy?", query: "Can I buy something worth ₹2,000 right now? Explain the tradeoff." },
-  { label: "Add expense", href: "/transactions" },
+// ============================================================================
+// SYSTEM CONFIGURATION & CONSTANTS
+// ============================================================================
+
+const API_ENDPOINT =
+  process.env.NEXT_PUBLIC_AI_API_ENDPOINT || "/api/ai";
+
+const HIDDEN_PATHS: readonly string[] = ["/", "/login"] as const;
+const DASHBOARD_PREFIX = "/dashboard" as const;
+
+const QUICK_PROMPTS: readonly QuickPromptItem[] = [
+  {
+    label: "Spending Vibe",
+    query:
+      "Analyze my spending. How much am I dropping on 'Subscriptions' and 'Food' specifically?",
+  },
+  {
+    label: "Safe to Spend",
+    query:
+      "How much can I safely spend right now based on my income and expenses?",
+  },
+  {
+    label: "Income Mix",
+    query:
+      "What is my income split between Salary and Freelance/Side-hustles?",
+  },
+  {
+    label: "Manifest Goal",
+    query:
+      "How close am I to my Dream Vault goals? Give me a timeline based on my current streak.",
+  },
+  {
+    label: "7-Day Plan",
+    query:
+      "Make me a practical 7-day saving plan from my current money data.",
+  },
+  {
+    label: "Can I Buy?",
+    query:
+      "Can I buy something worth ₹2,000 right now? Explain the tradeoff.",
+  },
+  { label: "Add Expense", href: "/transactions" },
   { label: "Analytics", href: "/analytics" },
   { label: "Goals", href: "/goals" },
   { label: "Garden", href: "/garden" },
   { label: "Dream Vault", href: "/wishlist" },
   { label: "Leaderboard", href: "/leaderboard" },
-];
+] as const;
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Generates a cryptographically secure unique identifier for stream nodes.
+ */
+function generateSecureId(): string {
+  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `${Math.random().toString(36).substring(2, 11)}-${Date.now().toString(36)}`;
+}
+
+/**
+ * Normalizes navigation route paths by prepending dashboard scope.
+ */
+function resolveDashboardRoute(href: string): string {
+  if (href.startsWith(DASHBOARD_PREFIX)) return href;
+  return `${DASHBOARD_PREFIX}${href.startsWith("/") ? "" : "/"}${href}`;
+}
+
+// ============================================================================
+// MEMOIZED SUB-COMPONENTS
+// ============================================================================
+
+/**
+ * Renders formatted inline markdown elements safely.
+ */
+function renderInlineMarkdown(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong
+          key={idx}
+          className="font-black text-zinc-950 underline decoration-amber-400 decoration-2"
+        >
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code
+          key={idx}
+          className="rounded border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-zinc-900"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return (
+        <em key={idx} className="italic text-zinc-900">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    return part;
+  });
+}
+
+/**
+ * Enterprise Markdown Parser component.
+ */
+const MarkdownRenderer = memo(({ content }: { content: string }) => {
+  const elements = useMemo(() => {
+    const lines = content.split("\n");
+    return lines.map((line, index) => {
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        return <div key={index} className="h-2" />;
+      }
+
+      if (trimmed.startsWith("### ")) {
+        return (
+          <h4
+            key={index}
+            className="mt-3 mb-1 text-xs font-black uppercase tracking-wider text-zinc-950"
+          >
+            {renderInlineMarkdown(trimmed.slice(4))}
+          </h4>
+        );
+      }
+      if (trimmed.startsWith("## ")) {
+        return (
+          <h3
+            key={index}
+            className="mt-4 mb-2 border-b border-zinc-200 pb-1 text-sm font-black uppercase tracking-wide text-zinc-950"
+          >
+            {renderInlineMarkdown(trimmed.slice(3))}
+          </h3>
+        );
+      }
+
+      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+        return (
+          <div key={index} className="ml-2 mt-1 flex items-start gap-2">
+            <span className="mt-1 shrink-0 text-[10px] text-amber-500">✦</span>
+            <span className="text-sm leading-relaxed text-zinc-800">
+              {renderInlineMarkdown(trimmed.slice(2))}
+            </span>
+          </div>
+        );
+      }
+
+      const numberedMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+      if (numberedMatch) {
+        return (
+          <div key={index} className="ml-2 mt-1 flex items-start gap-2">
+            <span className="mt-0.5 shrink-0 text-xs font-black text-amber-500">
+              {numberedMatch[1]}.
+            </span>
+            <span className="text-sm leading-relaxed text-zinc-800">
+              {renderInlineMarkdown(numberedMatch[2])}
+            </span>
+          </div>
+        );
+      }
+
+      return (
+        <p key={index} className="mt-1.5 text-sm leading-relaxed text-zinc-800">
+          {renderInlineMarkdown(line)}
+        </p>
+      );
+    });
+  }, [content]);
+
+  return <div className="space-y-0.5">{elements}</div>;
+});
+MarkdownRenderer.displayName = "MarkdownRenderer";
+
+const QuickPromptBadge = memo(
+  ({
+    item,
+    disabled,
+    onClick,
+  }: {
+    item: QuickPromptItem;
+    disabled: boolean;
+    onClick: () => void;
+  }) => (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "shrink-0 rounded-full border border-zinc-200 bg-zinc-50 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-zinc-600 transition-all duration-200",
+        "hover:border-zinc-950 hover:bg-amber-400 hover:text-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:pointer-events-none disabled:opacity-40"
+      )}
+    >
+      {item.label}
+    </button>
+  )
+);
+QuickPromptBadge.displayName = "QuickPromptBadge";
+
+const StreamLoadingIndicator = memo(() => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    className="flex w-fit items-center gap-2.5 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm"
+  >
+    <Zap size={14} className="animate-pulse fill-amber-500 text-amber-500" />
+    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+      Synthesizing Financial Context Stream...
+    </span>
+  </motion.div>
+));
+StreamLoadingIndicator.displayName = "StreamLoadingIndicator";
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function VibeCheck() {
   const router = useRouter();
   const pathname = usePathname();
   const finance = useFinanceContext();
 
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [input, setInput] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Hydrated initial greeting derived from active financial context state
   const initialMessage = useMemo((): ChatMessage => {
-    const userName = finance?.profile?.name ? finance.profile.name.split(" ")[0] : "Legend";
-    const totalSavings = finance?.savings ? finance.savings.toLocaleString("en-IN") : "0";
+    const userName = finance?.profile?.name
+      ? String(finance.profile.name).split(" ")[0]
+      : "Legend";
+    const totalSavings = (finance?.savings ?? 0).toLocaleString("en-IN");
     const currentStreak = finance?.streak ?? 0;
 
     if (!finance || finance.transactionCount === 0) {
       return {
-        id: "initial",
+        id: "initial_empty",
         role: "assistant",
         content:
-          "Yo! I'm VibeCheck AI, your core financial companion. 🌿 Your transaction index is currently clean. Open the Transactions module to log some data, then let me run an analytics audit on your spend aura.",
+          "Yo! I'm **VibeCheck AI**, your financial copilot. 🌿 Your transaction index is looking clean. Log some transactions, and let's optimize your financial momentum.",
+        timestamp: Date.now(),
       };
     }
+
     return {
-      id: "initial",
+      id: "initial_hydrated",
       role: "assistant",
-      content: `Yo ${userName}! VibeCheck AI is synced. You're holding **₹${totalSavings}** in net savings with a steady **${currentStreak}-day streak**. Let's review your spending landscape or hit a specific target. What's the play?`,
+      content: `Yo **${userName}**! VibeCheck AI is synced. You're holding **₹${totalSavings}** in net savings with a **${currentStreak}-day streak** active. What's our next play?`,
+      timestamp: Date.now(),
     };
   }, [finance]);
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
 
-  // Synchronize initial greeting when contextual engine hydrates state
+  // Synchronize greeting when finance state finishes initial hydration
   useEffect(() => {
-    setMessages((prev) =>
-      prev.length === 1 && prev[0].id === "initial" ? [initialMessage] : prev
-    );
+    setMessages((prev) => {
+      if (
+        prev.length === 1 &&
+        (prev[0].id === "initial_empty" || prev[0].id === "initial_hydrated")
+      ) {
+        return [initialMessage];
+      }
+      return prev;
+    });
   }, [initialMessage]);
 
-  const clearChat = () => {
-    if (window.confirm("Purge conversation context? Let's refresh the system dynamics! 🧹")) {
-      if (isLoading) abortControllerRef.current?.abort();
-      setMessages([initialMessage]);
-    }
-  };
-
-  // Lock scroll execution parameters securely to message updates
+  // Auto-scroll message stream on update
   useEffect(() => {
-    const scrollArea = scrollAreaRef.current;
-    if (scrollArea) {
-      scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: "smooth" });
+    const scrollContainer = scrollAreaRef.current;
+    if (scrollContainer) {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages, isLoading]);
 
-  // Abort lingering API configurations cleanly on component destruction
+  // Focus input automatically when panel opens
   useEffect(() => {
-    return () => abortControllerRef.current?.abort();
-  }, []);
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+  }, [isOpen]);
 
-  // Window Custom Event Hooks and Hotkeys Mapping Engine (Ctrl + K or Cmd + K)
+  // Global event listeners and hotkey handlers (Ctrl/Cmd + K)
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
     const handleToggle = () => setIsOpen((prev) => !prev);
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         handleToggle();
+      }
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
       }
     };
 
     window.addEventListener("vibecheck:open", handleOpen);
     window.addEventListener("vibecheck:toggle", handleToggle);
     window.addEventListener("keydown", handleKeyDown);
-    
+
     return () => {
       window.removeEventListener("vibecheck:open", handleOpen);
       window.removeEventListener("vibecheck:toggle", handleToggle);
       window.removeEventListener("keydown", handleKeyDown);
     };
+  }, [isOpen]);
+
+  // Abort active fetch controller on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
-  const sendToAI = async (text: string) => {
-    if (!text.trim() || isLoading) return;
-
-    const userMessage: ChatMessage = { id: generateId(), role: "user", content: text.trim() };
-    const historyForApi = [...messages, userMessage]
-      .filter((m) => m.id !== "initial" && !m.isError)
-      .map(m => ({ role: m.role, content: m.content }));
-
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
-
-    try {
-      // Connected to your high-performance vibecheck route
-      const response = await fetch("/api/vibecheck", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: historyForApi,
-          context: {
-            pathname: pathname || "",
-            profile: finance?.profile || {},
-            income: finance?.income || 0,
-            expense: finance?.expense || 0,
-            savings: finance?.savings || 0,
-            safeToSpend: finance?.safeToSpend || 0,
-            plantStage: finance?.plantStage || {},
-            plantStatus: finance?.plantStatus || "",
-            streak: finance?.streak || 0,
-            categoryTotals: finance?.categoryTotals || {},
-            recentTransactions: finance?.recentTransactions || [],
-            transactionCount: finance?.transactionCount || 0,
-          },
-        }),
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        let errMsg = "VibeCheck backend sync interrupted. Re-evaluating network parameters.";
-        try {
-          const errData = await response.json();
-          errMsg = errData.message ?? errData.error ?? errMsg;
-        } catch (_) {}
-        throw new Error(errMsg);
+  const clearChatContext = useCallback(() => {
+    if (
+      window.confirm(
+        "Purge conversation context? This will reset the AI memory for this session."
+      )
+    ) {
+      if (isLoading) {
+        abortControllerRef.current?.abort();
       }
+      setMessages([initialMessage]);
+    }
+  }, [isLoading, initialMessage]);
 
-      // Initialize Chunk Stream Engine Reader
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder("utf-8");
-      if (!reader) throw new Error("Null data stream pipe initialized.");
+  const executePromptStream = useCallback(
+    async (textPrompt: string) => {
+      const cleanPrompt = textPrompt.trim();
+      if (!cleanPrompt || isLoading) return;
 
-      const assistantId = generateId();
-      // Inject empty assistant node waiting to receive incoming string fragments
-      setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+      const userMessage: ChatMessage = {
+        id: generateSecureId(),
+        role: "user",
+        content: cleanPrompt,
+        timestamp: Date.now(),
+      };
 
-      let streamingAccumulator = "";
-      
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        streamingAccumulator += decoder.decode(value, { stream: true });
-        
-        // Push incoming token strings instantly to state for immediate rendering
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantId ? { ...msg, content: streamingAccumulator } : msg
-          )
-        );
+      const operationalHistory = [...messages, userMessage]
+        .filter(
+          (m) =>
+            m.id !== "initial_empty" &&
+            m.id !== "initial_hydrated" &&
+            !m.isError
+        )
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      setMessages((prev) => [...prev, userMessage]);
+      setIsLoading(true);
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
-      
-      // Flush residual decoder state
-      decoder.decode(new Uint8Array(), { stream: false });
+      abortControllerRef.current = new AbortController();
 
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      const errText = err instanceof Error ? err.message : "Network protocol collision. Check pipeline connection.";
-      
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant" && !last.content) {
-          return prev.slice(0, -1).concat({
-            id: generateId(),
-            role: "assistant",
-            content: errText,
-            isError: true,
-          });
-        }
-        return [...prev, { id: generateId(), role: "assistant", content: errText, isError: true }];
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const contextPayload: ContextPayload = {
+        pathname: pathname || "",
+        profile: finance?.profile || {},
+        income: finance?.income || 0,
+        expense: finance?.expense || 0,
+        savings: finance?.savings || 0,
+        safeToSpend: finance?.safeToSpend || 0,
+        plantStage: finance?.plantStage || {},
+        plantStatus: finance?.plantStatus || "",
+        streak: finance?.streak || 0,
+        categoryTotals: finance?.categoryTotals || {},
+        recentTransactions: finance?.recentTransactions || [],
+        transactionCount: finance?.transactionCount || 0,
+      };
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    const text = input;
-    if (!text.trim()) return;
-    setInput("");
-    sendToAI(text);
-  };
-
-  const handleQuickPrompt = (item: (typeof QUICK_PROMPTS)[number]) => {
-    if (item.href) {
-      setIsOpen(false);
-      router.push(withDashboardPath(item.href));
-      return;
-    }
-    if (item.query) {
-      setIsOpen(true);
-      sendToAI(item.query);
-    }
-  };
-
-  // Premium Micro-parser mapping custom Markdown strings into clean React Nodes
-  const formatMessageContent = (content: string) => {
-    return content.split("\n").map((line, lineIndex) => {
-      let elements: React.ReactNode[] = [];
-      const boldCodeRegex = /(\*\*.*?\*\*|`.*?`)/g;
-      
-      if (boldCodeRegex.test(line)) {
-        const parts = line.split(boldCodeRegex);
-        elements = parts.map((part, index) => {
-          if (part.startsWith("**") && part.endsWith("**")) {
-            return (
-              <strong key={index} className="font-extrabold text-zinc-900 underline decoration-yellow-400/40 decoration-2">
-                {part.slice(2, -2)}
-              </strong>
-            );
-          }
-          if (part.startsWith("`") && part.endsWith("`")) {
-            return (
-              <code key={index} className="px-1.5 py-0.5 bg-white/10 rounded font-mono text-xs text-yellow-300 border border-white/5">
-                {part.slice(1, -1)}
-              </code>
-            );
-          }
-          return part;
+      try {
+        const response = await fetch(API_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: operationalHistory,
+            context: contextPayload,
+          }),
+          signal: abortControllerRef.current.signal,
         });
-      } else {
-        elements = [line];
+
+        if (!response.ok) {
+          let errorMsg = `Server error status ${response.status}. Failed to communicate with VibeCheck AI.`;
+          try {
+            const errJson = await response.json();
+            errorMsg = errJson.message ?? errJson.error ?? errorMsg;
+          } catch {
+            // Fallback to generic error message
+          }
+          throw new Error(errorMsg);
+        }
+
+        if (!response.body) {
+          throw new Error("Received empty response payload stream.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        const assistantId = generateSecureId();
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantId,
+            role: "assistant",
+            content: "",
+            timestamp: Date.now(),
+          },
+        ]);
+
+        let accumulatedContent = "";
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            accumulatedContent += decoder.decode(value, { stream: true });
+
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId
+                  ? { ...msg, content: accumulatedContent }
+                  : msg
+              )
+            );
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+
+        const fallbackErrorText =
+          err instanceof Error
+            ? err.message
+            : "Network boundary error. Please check your system connection.";
+
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.role === "assistant" && !lastMsg.content) {
+            return prev.slice(0, -1).concat({
+              id: generateSecureId(),
+              role: "assistant",
+              content: fallbackErrorText,
+              timestamp: Date.now(),
+              isError: true,
+            });
+          }
+          return [
+            ...prev,
+            {
+              id: generateSecureId(),
+              role: "assistant",
+              content: fallbackErrorText,
+              timestamp: Date.now(),
+              isError: true,
+            },
+          ];
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      return (
-        <p key={lineIndex} className={cn("min-h-[1.2rem] text-zinc-200", lineIndex > 0 && "mt-2")}>
-          {elements}
-        </p>
-      );
-    });
+    },
+    [isLoading, messages, pathname, finance]
+  );
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    const currentInput = input;
+    setInput("");
+    executePromptStream(currentInput);
   };
+
+  const handleQuickPromptClick = useCallback(
+    (item: QuickPromptItem) => {
+      if (item.href) {
+        setIsOpen(false);
+        router.push(resolveDashboardRoute(item.href));
+        return;
+      }
+      if (item.query) {
+        setIsOpen(true);
+        executePromptStream(item.query);
+      }
+    },
+    [router, executePromptStream]
+  );
 
   if (pathname && HIDDEN_PATHS.includes(pathname)) {
     return null;
@@ -296,194 +581,212 @@ export default function VibeCheck() {
 
   return (
     <>
-      {/* Absolute floating action button trigger */}
-      <motion.button
-        aria-label="Open VibeCheck AI Terminal"
-        initial={{ scale: 0, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        whileHover={{ scale: 1.08, rotate: 6 }}
-        whileTap={{ scale: 0.92 }}
-        onClick={() => setIsOpen(true)}
-        className={cn(
-          "fixed bottom-28 right-4 z-[100] flex h-14 w-14 items-center justify-center rounded-full shadow-[0_20px_50px_rgba(234,179,8,0.3)] sm:right-6 sm:h-16 sm:w-16 lg:bottom-8 transition-shadow duration-300",
-          "bg-gradient-to-tr from-[#FFD700] via-[#FACC15] to-[#EAB308]",
-          "text-black border-[3px] border-white/50",
-          isOpen && "hidden"
-        )}
-      >
-        <Sparkles size={26} className="animate-pulse" />
-      </motion.button>
+      {/* Floating Action Trigger Button */}
+      <FloatingButton
+        isPanelOpen={isOpen}
+        onClick={() => setIsOpen((prev) => !prev)}
+      />
 
-      {/* Main Intelligent Deck */}
+      {/* Interactive AI Drawer Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.aside
-            aria-label="VibeCheck AI Assistant Interface"
-            initial={{ opacity: 0, y: 60, scale: 0.88 }}
-            animate={{ 
-              opacity: 1, 
-              y: 0, 
+            role="dialog"
+            aria-modal="true"
+            aria-label="VibeCheck AI Interface"
+            id="vibecheck-assistant-panel"
+            initial={{ opacity: 0, y: 40, scale: 0.92 }}
+            animate={{
+              opacity: 1,
+              y: 0,
               scale: 1,
-              width: isExpanded ? "min(94vw, 720px)" : "min(94vw, 420px)",
-              height: isExpanded ? "min(85vh, 780px)" : "min(620px, calc(100dvh - 9rem))"
+              width: isExpanded ? "min(94vw, 760px)" : "min(94vw, 440px)",
+              height: isExpanded
+                ? "min(88vh, 820px)"
+                : "min(640px, calc(100dvh - 8rem))",
             }}
-            exit={{ opacity: 0, y: 60, scale: 0.88 }}
-            transition={{ type: "spring", damping: 26, stiffness: 220 }}
-            className="fixed inset-x-3 bottom-28 z-[101] flex flex-col overflow-hidden rounded-[32px] border border-zinc-200 shadow-[0_40px_80px_rgba(0,0,0,0.5)] ring-1 ring-white/10 glass-panel sm:inset-x-auto sm:right-6 lg:bottom-8 bg-white shadow-2xl "
+            exit={{ opacity: 0, y: 40, scale: 0.92 }}
+            transition={{ type: "spring", damping: 28, stiffness: 240 }}
+            className="fixed inset-x-3 bottom-24 z-[101] flex flex-col overflow-hidden rounded-[24px] border-2 border-zinc-950 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] sm:inset-x-auto sm:right-6 lg:bottom-8"
           >
-            {/* Header Control Container */}
-            <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50 p-4 backdrop-blur-xl sm:px-5 sm:py-4">
+            {/* Header Control Bar */}
+            <header className="flex shrink-0 items-center justify-between border-b-2 border-zinc-950 bg-zinc-50 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-yellow-500/20 bg-yellow-500/10 shadow-inner">
-                  <MessageCircle size={24} className="text-yellow-400" />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-zinc-950 bg-amber-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  <MessageCircle size={22} className="text-zinc-950" />
                 </div>
-                <div className="min-w-0">
+                <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-black text-base tracking-tight text-zinc-900">VibeCheck AI</h3>
-                    <span className="bg-yellow-400/20 border border-yellow-400/30 text-yellow-400 px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-widest uppercase">PREMIUM</span>
+                    <h3 className="text-base font-black tracking-tight text-zinc-950">
+                      VibeCheck AI
+                    </h3>
+                    <span className="rounded border border-zinc-950 bg-amber-400 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-zinc-950">
+                      PRO STREAM
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="mt-0.5 flex items-center gap-1.5">
                     <span
                       className={cn(
-                        "w-2 h-2 rounded-full ring-4 transition-all duration-500",
+                        "h-2 w-2 rounded-full ring-2 ring-zinc-950 transition-colors duration-300",
                         isLoading || finance?.loading
-                          ? "bg-yellow-400 ring-yellow-400/20 animate-pulse" 
-                          : "bg-green-500 ring-green-500/20"
+                          ? "animate-pulse bg-amber-400"
+                          : "bg-emerald-400"
                       )}
                     />
-                    <span className="text-[9px] font-black uppercase tracking-wider text-zinc-900/50">
-                      {isLoading ? "Streaming Matrix Context..." : "Secure Ledger Pipeline Synced"}
+                    <span className="text-[9px] font-black uppercase tracking-wider text-zinc-600">
+                      {isLoading
+                        ? "Synthesizing Stream..."
+                        : "Encrypted Context Synced"}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              {/* Window Layout Modifiers */}
-              <div className="flex shrink-0 items-center gap-1.5">
+
+              <div className="flex shrink-0 items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => setIsExpanded((prev) => !prev)}
-                  aria-label={isExpanded ? "Collapse panel" : "Expand panel"}
-                  className="hidden sm:flex rounded-xl p-2 text-zinc-900/40 transition-all hover:bg-white/10 hover:text-zinc-900"
+                  aria-label={isExpanded ? "Collapse modal" : "Expand modal"}
+                  className="hidden rounded-lg p-2 text-zinc-500 transition-colors hover:border hover:border-zinc-950 hover:bg-zinc-100 hover:text-zinc-950 sm:flex"
                 >
-                  {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                  {isExpanded ? (
+                    <Minimize2 size={16} />
+                  ) : (
+                    <Maximize2 size={16} />
+                  )}
                 </button>
                 <button
-                  onClick={clearChat}
-                  aria-label="Clear context session history"
-                  className="rounded-xl p-2 text-zinc-900/40 transition-all hover:bg-white/10 hover:text-red-400"
+                  type="button"
+                  onClick={clearChatContext}
+                  aria-label="Clear chat context history"
+                  className="rounded-lg p-2 text-zinc-500 transition-colors hover:border hover:border-zinc-950 hover:bg-red-50 hover:text-red-600"
                 >
                   <Trash2 size={16} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
-                  aria-label="Close terminal view"
-                  className="rounded-xl p-2 transition-all hover:bg-white/10 text-zinc-900/60 hover:text-zinc-900"
+                  aria-label="Close modal"
+                  className="rounded-lg p-2 text-zinc-500 transition-colors hover:border hover:border-zinc-950 hover:bg-zinc-100 hover:text-zinc-950"
                 >
-                  <ChevronDown size={22} />
+                  <ChevronDown size={20} />
                 </button>
               </div>
-            </div>
+            </header>
 
-            {/* Horizontal Command List Matrix */}
-            <div className="no-scrollbar flex shrink-0 gap-2 overflow-x-auto px-4 pt-3.5 pb-1">
-              {QUICK_PROMPTS.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => handleQuickPrompt(item)}
-                  className="shrink-0 rounded-full border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-[10px] font-black uppercase tracking-wider transition-all duration-200 hover:bg-yellow-400 hover:text-black hover:border-transparent disabled:opacity-40 shadow-sm"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Message Thread Scrollport */}
-            <div
-              ref={scrollAreaRef}
-              className="no-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto bg-white border border-zinc-200 p-4 sm:space-y-6 sm:p-5"
+            {/* Quick Prompts Navigation Strip */}
+            <section
+              aria-label="Quick Prompt Suggestions"
+              className="no-scrollbar flex shrink-0 gap-2 overflow-x-auto border-b border-zinc-150 bg-zinc-50/50 px-4 py-3"
             >
-              {messages.map((msg) => (
+              {QUICK_PROMPTS.map((promptItem) => (
+                <QuickPromptBadge
+                  key={promptItem.label}
+                  item={promptItem}
+                  disabled={isLoading}
+                  onClick={() => handleQuickPromptClick(promptItem)}
+                />
+              ))}
+            </section>
+
+            {/* Scrollable Message Thread */}
+            <section
+              ref={scrollAreaRef}
+              aria-live="polite"
+              aria-relevant="additions text"
+              className="no-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto bg-zinc-50/30 p-4 sm:p-5"
+            >
+              {messages.map((message) => (
                 <motion.div
-                  key={msg.id}
+                  key={message.id}
                   layout="position"
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={cn("flex flex-col", msg.role === "user" ? "items-end" : "items-start")}
+                  className={cn(
+                    "flex flex-col",
+                    message.role === "user" ? "items-end" : "items-start"
+                  )}
                 >
                   <div
                     className={cn(
-                      "max-w-[88%] rounded-[24px] px-4 py-3.5 text-sm font-medium leading-relaxed shadow-xl border transition-all duration-300",
-                      msg.role === "user"
-                        ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-black font-semibold border-white/20 rounded-tr-none shadow-yellow-400/10"
-                        : msg.isError 
-                        ? "bg-red-500/10 border-red-500/20 text-red-400 rounded-tl-none flex items-start gap-2"
-                        : "bg-white/[0.03] border-zinc-200 text-zinc-900/90 rounded-tl-none"
+                      "max-w-[88%] rounded-[20px] px-4 py-3 text-sm transition-all duration-200",
+                      message.role === "user"
+                        ? "rounded-tr-none border-2 border-zinc-950 bg-amber-400 font-bold text-zinc-950 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                        : message.isError
+                          ? "flex items-start gap-2 rounded-tl-none border border-red-300 bg-red-50 text-red-600"
+                          : "rounded-tl-none border border-zinc-200 bg-white font-medium text-zinc-900 shadow-sm"
                     )}
                   >
-                    {msg.isError && <AlertCircle size={16} className="mt-0.5 shrink-0" />}
+                    {message.isError && (
+                      <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                    )}
                     <div>
-                      {msg.role === "assistant" ? formatMessageContent(msg.content) : msg.content}
+                      {message.role === "assistant" ? (
+                        <MarkdownRenderer content={message.content} />
+                      ) : (
+                        message.content
+                      )}
                     </div>
                   </div>
-                  <span className="text-[8px] mt-1.5 font-black tracking-widest opacity-40 uppercase px-2">
-                    {msg.role === "user" ? "Client Device" : msg.isError ? "System Pipeline Error" : "VibeCheck Matrix"}
+                  <span className="mt-1 px-2 text-[8px] font-black uppercase tracking-widest text-zinc-400">
+                    {message.role === "user"
+                      ? "Client Input"
+                      : message.isError
+                        ? "Pipeline Fault"
+                        : "VibeCheck Intelligence"}
                   </span>
                 </motion.div>
               ))}
-              
-              {/* Dynamic Engine Diagnostics Loader */}
-              {isLoading && messages[messages.length - 1]?.content === "" && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex w-fit items-center gap-2.5 rounded-2xl border border-white/5 bg-zinc-50 px-4 py-3 shadow-2xl"
-                >
-                  <Zap size={14} className="text-yellow-400 fill-yellow-400 animate-pulse" />
-                  <span className="text-[10px] font-black tracking-widest text-zinc-900/60 uppercase">
-                    Compiling Financial Vectors...
-                  </span>
-                </motion.div>
-              )}
-            </div>
 
-            {/* Data Submission Command Deck */}
-            <form
-              onSubmit={handleSendMessage}
-              className="shrink-0 border-t border-zinc-200 bg-white shadow-2xl sm:p-5"
-            >
-              <div className="relative flex items-center">
+              {isLoading &&
+                messages[messages.length - 1]?.content === "" && (
+                  <StreamLoadingIndicator />
+                )}
+            </section>
+
+            {/* Footer Form Input */}
+            <footer className="shrink-0 border-t-2 border-zinc-950 bg-white p-4">
+              <form
+                onSubmit={handleFormSubmit}
+                className="relative flex items-center"
+              >
                 <input
+                  ref={inputRef}
+                  type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  aria-label="Direct text prompt transmission stream input"
-                  placeholder="Query cash trends, goal forecasting, safety values..."
+                  aria-label="VibeCheck prompt query input"
+                  placeholder="Ask about spending vibes, savings goals..."
                   disabled={isLoading}
-                  className="w-full rounded-[24px] border border-zinc-200 bg-zinc-50 py-4 pl-5 pr-14 text-sm font-semibold text-zinc-900 placeholder:text-zinc-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 focus:border-transparent disabled:opacity-50 transition-all duration-300"
+                  className={cn(
+                    "w-full rounded-[20px] border-2 border-zinc-950 bg-zinc-50 py-3.5 pl-4 pr-14 text-sm font-bold text-zinc-950 placeholder:text-zinc-400 transition-all",
+                    "focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+                  )}
                 />
                 <button
                   type="submit"
-                  aria-label="Transmit prompt data to AI"
+                  aria-label="Send query"
                   disabled={!input.trim() || isLoading}
-                  className="absolute right-2.5 rounded-2xl bg-yellow-400 p-2.5 text-black transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+                  className={cn(
+                    "absolute right-2 rounded-xl border border-zinc-950 bg-amber-400 p-2 text-zinc-950 transition-all",
+                    "hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 disabled:pointer-events-none disabled:opacity-40"
+                  )}
                 >
                   <Send size={18} className="stroke-[2.5]" />
                 </button>
+              </form>
+
+              <div className="pointer-events-none mt-3 flex items-center justify-center gap-6 text-[8px] font-black uppercase tracking-widest text-zinc-400">
+                <span className="flex items-center gap-1">
+                  <TrendingUp size={11} className="text-zinc-500" />
+                  Gemini 2.5 Flash
+                </span>
+                <span className="flex items-center gap-1">
+                  <Terminal size={11} className="text-zinc-500" />
+                  Isolated Context
+                </span>
               </div>
-              
-              {/* Terminal System Footer Metadata */}
-              <div className="pointer-events-none mt-3.5 flex justify-center gap-5 opacity-20">
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp size={11} className="text-zinc-900" />
-                  <span className="text-[8px] font-black tracking-widest uppercase text-zinc-900">Gemini 2.5 Flash Stream</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <MessageSquare size={11} className="text-zinc-900" />
-                  <span className="text-[8px] font-black tracking-widest uppercase text-zinc-900">Isolated Context Ledger</span>
-                </div>
-              </div>
-            </form>
+            </footer>
           </motion.aside>
         )}
       </AnimatePresence>

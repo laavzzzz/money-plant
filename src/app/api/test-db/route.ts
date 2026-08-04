@@ -10,10 +10,14 @@ export async function GET() {
       message: "MongoDB Connected Successfully",
     });
   } catch (err) {
+    console.error("FULL ERROR:", err);
+
     return NextResponse.json(
       {
         success: false,
-        error: err instanceof Error ? err.message : String(err),
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : null,
+        name: err instanceof Error ? err.name : null,
       },
       { status: 500 }
     );

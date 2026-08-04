@@ -9,19 +9,20 @@ type MongooseCache = {
   failed: boolean;
 };
 
-declare global {
-  // eslint-disable-next-line no-var
-  var mongooseCache: MongooseCache | undefined;
-}
+type GlobalWithMongooseCache = typeof globalThis & {
+  mongooseCache?: MongooseCache;
+};
 
-const cached: MongooseCache = global.mongooseCache ?? {
+const globalWithCache = globalThis as GlobalWithMongooseCache;
+
+const cached: MongooseCache = (globalWithCache.mongooseCache ?? {
   conn: null,
   promise: null,
   failed: false,
-};
+}) as MongooseCache;
 
-if (!global.mongooseCache) {
-  global.mongooseCache = cached;
+if (!globalWithCache.mongooseCache) {
+  globalWithCache.mongooseCache = cached;
 }
 
 const MONGO_PROBE_MS = 1500;
