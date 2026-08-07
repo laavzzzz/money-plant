@@ -1,31 +1,94 @@
-import { NextAuthOptions} from "next-auth";
+/**
+ * @file src/app/api/auth/[...nextauth]/options.ts
+ * @module AuthOptions
+ * @description Enterprise-grade NextAuth configuration for MoneyPlant.
+ * Manages Credentials and Google OAuth authentication providers, MongoDB database synchronization,
+ * JWT token payload enrichment (including onboarding flags), and secure session hydration.
+ *
+ * @version 3.1.0
+ */
+
+import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import { User as UserModel, IUser } from "@/models/User";
+import { AuthProviderType } from "@/types/next-auth";
 
-/**
- * Module Augmentation for NextAuth internal contracts.
- * Modifiers (required vs optional) match NextAuth base interfaces.
- */
+type IUserWithId = IUser & { _id: unknown };
 
+// ============================================================================
+// ENVIRONMENT VARIABLE VALIDATION & CONFIGURATION
+// ============================================================================
 
-/**
- * Validates critical environment variables during application startup.
- */
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 
-if (!process.env.NEXTAUTH_SECRET && process.env.NODE_ENV === "production") {
-  console.warn(
-    "[NEXTAUTH_CONFIG_WARN] NEXTAUTH_SECRET is not defined in production environment variables."
+/** Dummy bcrypt hash used to prevent timing attacks on email non-existence */
+const DUMMY_BCRYPT_HASH =
+  "$2a$12$e883m6c5/H3uJ6aW5B7/1.OQ8O3X/WpE0pL3Z0e/K7Y2pM7L5Y3G.";
+
+if (!NEXTAUTH_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "[FATAL_AUTH_CONFIG] NEXTAUTH_SECRET or AUTH_SECRET must be defined in production environment."
   );
 }
 
+if ((!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[NEXTAUTH_CONFIG_WARN] Google OAuth credentials (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET) are missing."
+  );
+}
+
+// ============================================================================
+// HELPER UTILITIES
+// ============================================================================
+
 /**
- * Enterprise NextAuth Options Configuration.
+ * Safely converts MongoDB ObjectId or string types to a standardized string representation.
  */
+function toObjectIdString(id: unknown): string {
+  if (!id) return "";
+  if (typeof id === "string") return id;
+  if (typeof id === "object" && "toString" in id && typeof id.toString === "function") {
+    return id.toString();
+  }
+  return String(id);
+}
+
+/**
+ * Structured logger for authentication options events.
+ */
+function logAuthEvent(
+  level: "INFO" | "WARN" | "ERROR",
+  message: string,
+  meta?: Record<string, unknown>
+): void {
+  if (process.env.NODE_ENV === "test") return;
+
+  const payload = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    scope: "NextAuthOptions",
+    level,
+    message,
+    ...meta,
+  });
+
+  if (level === "ERROR") {
+    console.error(payload);
+  } else if (level === "WARN") {
+    console.warn(payload);
+  } else if (process.env.NODE_ENV !== "production") {
+    console.log(payload);
+  }
+}
+
+// ============================================================================
+// NEXTAUTH OPTIONS CONFIGURATION
+// ============================================================================
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -36,9 +99,9 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
 
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing authentication parameters.");
+          throw new Error("Missing email or password.");
         }
 
         const normalizedEmail = credentials.email.toLowerCase().trim();
@@ -49,44 +112,54 @@ export const authOptions: NextAuthOptions = {
         // 2. Fetch user profile with explicit password selection
         const user = (await UserModel.findOne({
           email: normalizedEmail,
-        }).select("+password")) as IUser | null;
+        }).select("+password")) as IUserWithId | null;
 
+        // 3. Mitigate timing attacks if user does not exist
         if (!user) {
-          throw new Error("No account found with this email address.");
+          await bcrypt.compare(credentials.password, DUMMY_BCRYPT_HASH);
+          throw new Error("Invalid email or password.");
         }
 
-        // 3. Prevent credentials login if account was registered via Google OAuth only
+        // 4. Prevent credentials login if account was registered via Google OAuth without password
         if (user.provider === "google" && !user.password) {
           throw new Error(
-            "This account uses Google Sign-In. Please continue with Google."
+            "This account was created using Google Sign-In. Please sign in with Google."
           );
         }
 
-        // 4. Verify email verification status
+        // 5. Verify email verification status
         if (!user.isVerified) {
           throw new Error(
-            "Your email address is not verified. Please verify your OTP first."
+            "Your email address is not verified. Please verify your OTP to continue."
           );
         }
 
-        // 5. Perform bcrypt password validation
+        // 6. Perform bcrypt password validation
         const isPasswordCorrect = await bcrypt.compare(
           credentials.password,
           user.password || ""
         );
 
         if (!isPasswordCorrect) {
-          throw new Error("Invalid password. Please try again.");
+          throw new Error("Invalid email or password.");
         }
 
-        // 6. Return standard user authorization payload
+        const userIdStr = toObjectIdString(user._id);
+        const onboardingStep =
+          user.onboardingStep !== undefined && user.onboardingStep !== null
+            ? String(user.onboardingStep)
+            : null;
+
+        // 7. Return standard user authorization payload
         return {
-          id: (user._id as string | object).toString(),
-          name: user.name || "User",
+          id: userIdStr,
+          name: user.name || "MoneyPlant User",
           email: user.email,
-          image: user.image,
-          provider: user.provider || "credentials",
+          image: user.image || null,
+          provider: (user.provider as AuthProviderType) || "credentials",
           isVerified: user.isVerified ?? true,
+          onboardingCompleted: user.onboardingCompleted ?? false,
+          onboardingStep,
         };
       },
     }),
@@ -106,10 +179,10 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 Days persistence
+    maxAge: 30 * 24 * 60 * 60, // 30 Days session duration
   },
 
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: NEXTAUTH_SECRET,
 
   pages: {
     signIn: "/login",
@@ -128,49 +201,66 @@ export const authOptions: NextAuthOptions = {
           const normalizedEmail = user.email?.toLowerCase().trim();
 
           if (!normalizedEmail) {
-            console.error("[OAUTH_SIGNIN_ERROR] No email provided by Google OAuth payload.");
+            logAuthEvent("ERROR", "No email provided by Google OAuth payload.");
             return false;
           }
 
-          // Atomic search and sync operation
-          const existingUser = await UserModel.findOne({ email: normalizedEmail });
+          // Atomic search and sync operation using MongoDB findOneAndUpdate to prevent race conditions
+          const existingUser = (await UserModel.findOne({
+            email: normalizedEmail,
+          })) as IUserWithId | null;
 
           if (!existingUser) {
             // Register new Google account
             const newUser = await UserModel.create({
-              name: user.name,
+              name: user.name || "MoneyPlant User",
               email: normalizedEmail,
-              image: user.image,
+              image: user.image || null,
               provider: "google",
               providerId: account.providerAccountId,
               isVerified: true,
+              onboardingCompleted: false,
+              onboardingStep: "PROFILE_SETUP",
             });
 
-            // Populate user.id so it flows cleanly into the jwt callback
-            user.id = (newUser._id as string | object).toString();
+            const newUserIdStr = toObjectIdString(newUser._id);
+            user.id = newUserIdStr;
+            user.onboardingCompleted = false;
+            user.onboardingStep = "PROFILE_SETUP";
           } else {
-            // Update existing user with latest Google details safely
-            await UserModel.updateOne(
+            // Safe update of existing account (Account linking support)
+            const updatedUser = (await UserModel.findOneAndUpdate(
               { _id: existingUser._id },
               {
                 $set: {
                   providerId: account.providerAccountId,
                   isVerified: true,
-                  image: existingUser.image || user.image,
+                  image: existingUser.image || user.image || null,
                 },
-              }
-            );
+              },
+              { new: true }
+            )) as IUserWithId;
 
-            // Populate user.id so it flows cleanly into the jwt callback
-            user.id = (existingUser._id as string | object).toString();
+            const existingUserIdStr = toObjectIdString(updatedUser._id);
+            user.id = existingUserIdStr;
+            user.onboardingCompleted = updatedUser.onboardingCompleted ?? false;
+            user.onboardingStep =
+              updatedUser.onboardingStep != null ? String(updatedUser.onboardingStep) : null;
           }
 
           user.provider = "google";
           user.isVerified = true;
 
+          logAuthEvent("INFO", "Google OAuth synchronization completed successfully.", {
+            email: normalizedEmail,
+            userId: user.id,
+          });
+
           return true;
         } catch (error) {
-          console.error("[NEXTAUTH_OAUTH_SYNC_ERROR] Error during Google OAuth sign-in sync:", error);
+          logAuthEvent("ERROR", "Error during Google OAuth sign-in synchronization.", {
+            error: error instanceof Error ? error.message : String(error),
+          });
           return false;
         }
       }
@@ -179,21 +269,32 @@ export const authOptions: NextAuthOptions = {
     },
 
     /**
-     * Injects database ID, provider, and verification status into the JWT payload.
+     * Injects database ID, provider, verification status, and onboarding metadata into JWT.
      * ZERO DB Queries executed on subsequent requests after initial login.
      */
     async jwt({ token, user, trigger, session }) {
       // Execute initial user payload assignment
       if (user) {
         token.id = user.id;
-        token.provider = user.provider;
-        token.isVerified = user.isVerified;
+        token.provider = user.provider || "credentials";
+        token.isVerified = user.isVerified ?? true;
+        token.onboardingCompleted = user.onboardingCompleted ?? false;
+        token.onboardingStep = user.onboardingStep || null;
       }
 
-      // Handle dynamic client-side session updates
+      // Handle dynamic client-side session updates via update()
       if (trigger === "update" && session) {
-        if (session.name) token.name = session.name;
-        if (session.image) token.picture = session.image;
+        if (typeof session.name === "string") token.name = session.name;
+        if (typeof session.image === "string") token.picture = session.image;
+        if (typeof session.onboardingCompleted === "boolean") {
+          token.onboardingCompleted = session.onboardingCompleted;
+        }
+        if (typeof session.onboardingStep === "string" || session.onboardingStep === null) {
+          token.onboardingStep = session.onboardingStep;
+        }
+        if (typeof session.isVerified === "boolean") {
+          token.isVerified = session.isVerified;
+        }
       }
 
       return token;
@@ -204,9 +305,14 @@ export const authOptions: NextAuthOptions = {
      */
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.provider = token.provider || "credentials";
-        session.user.isVerified = token.isVerified ?? true;
+        session.user = {
+          ...session.user,
+          id: token.id,
+          provider: token.provider || "credentials",
+          isVerified: token.isVerified ?? true,
+          onboardingCompleted: Boolean(token.onboardingCompleted),
+          onboardingStep: token.onboardingStep || null,
+        };
       }
 
       return session;

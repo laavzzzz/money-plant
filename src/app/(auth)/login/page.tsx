@@ -5,50 +5,84 @@
  * highly optimized Framer Motion visual transitions.
  * 
  * @module Auth/LoginPage
- * @version 2.2.0
+ * @version 3.0.0
  */
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useId, memo, useMemo } from "react";
+import React, {
+  useReducer,
+  useCallback,
+  useId,
+  memo,
+  useMemo,
+  useEffect,
+  ChangeEvent,
+  FormEvent,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, AtSign, Phone, ChevronRight, CheckCircle2, AlertCircle, Loader2, Lock, User } from "lucide-react";
+import {
+  ArrowLeft,
+  AtSign,
+  Phone,
+  ChevronRight,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Lock,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, useSession, SignInResponse } from "next-auth/react";
 
 // ============================================================================
-// CONSTANTS & REGEX VALIDATION CONFIGURATIONS
+// DOMAIN CONFIGURATION & CONSTANTS
 // ============================================================================
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-const PHONE_REGEX = /^[6-9]\d{9}$/; // E.164 compliant Indian mobile prefixes
+const PHONE_REGEX = /^[6-9]\d{9}$/; // Standard 10-digit Indian mobile format
 const MIN_PASSWORD_LENGTH = 8;
 const DEFAULT_REDIRECT_URL = "/dashboard";
+const REGISTER_API_ENDPOINT = "/api/auth/register";
 
 // ============================================================================
-// SYSTEM TYPES & INTERFACES
+// TYPE DEFINITIONS & DOMAIN INTERFACES
 // ============================================================================
 
 export type AuthMode = "login" | "signup";
 export type AuthMethod = "email" | "phone";
 
 export interface SystemFormFields {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
+  readonly name: string;
+  readonly email: string;
+  readonly phone: string;
+  readonly password: string;
 }
 
-export interface AuthenticationState {
-  mode: AuthMode;
-  method: AuthMethod;
-  fields: SystemFormFields;
-  isGoogleLoading: boolean;
-  isSubmitting: boolean;
-  error: string | null;
-  success: string | null;
+export interface AuthState {
+  readonly mode: AuthMode;
+  readonly method: AuthMethod;
+  readonly fields: SystemFormFields;
+  readonly isGoogleLoading: boolean;
+  readonly isSubmitting: boolean;
+  readonly error: string | null;
+  readonly success: string | null;
 }
+
+export type AuthAction =
+  | { type: "SET_FIELD"; payload: { field: keyof SystemFormFields; value: string } }
+  | { type: "TOGGLE_MODE" }
+  | { type: "TOGGLE_METHOD" }
+  | { type: "SET_GOOGLE_LOADING"; payload: boolean }
+  | { type: "SET_SUBMITTING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_SUCCESS"; payload: string | null }
+  | { type: "RESET_MESSAGES" };
+
+// ============================================================================
+// INITIAL STATE & REDUCER
+// ============================================================================
 
 const INITIAL_FIELDS: SystemFormFields = {
   name: "",
@@ -57,7 +91,7 @@ const INITIAL_FIELDS: SystemFormFields = {
   password: "",
 };
 
-const INITIAL_STATE: AuthenticationState = {
+const INITIAL_STATE: AuthState = {
   mode: "login",
   method: "email",
   fields: INITIAL_FIELDS,
@@ -67,12 +101,51 @@ const INITIAL_STATE: AuthenticationState = {
   success: null,
 };
 
+function authReducer(state: AuthState, action: AuthAction): AuthState {
+  switch (action.type) {
+    case "SET_FIELD":
+      return {
+        ...state,
+        fields: {
+          ...state.fields,
+          [action.payload.field]: action.payload.value,
+        },
+        error: null,
+      };
+    case "TOGGLE_MODE":
+      return {
+        ...INITIAL_STATE,
+        mode: state.mode === "login" ? "signup" : "login",
+        method: state.method,
+      };
+    case "TOGGLE_METHOD":
+      return {
+        ...state,
+        method: state.method === "email" ? "phone" : "email",
+        error: null,
+        success: null,
+      };
+    case "SET_GOOGLE_LOADING":
+      return { ...state, isGoogleLoading: action.payload };
+    case "SET_SUBMITTING":
+      return { ...state, isSubmitting: action.payload };
+    case "SET_ERROR":
+      return { ...state, error: action.payload };
+    case "SET_SUCCESS":
+      return { ...state, success: action.payload };
+    case "RESET_MESSAGES":
+      return { ...state, error: null, success: null };
+    default:
+      return state;
+  }
+}
+
 // ============================================================================
-// AUDIT LOGGING & TELEMETRY UTILITY
+// TELEMETRY & AUDIT LOGGER
 // ============================================================================
 
 class AuthLogger {
-  private static isDev = process.env.NODE_ENV !== "production";
+  private static readonly isDev = process.env.NODE_ENV !== "production";
 
   public static info(event: string, context?: Record<string, unknown>): void {
     if (this.isDev) {
@@ -86,11 +159,77 @@ class AuthLogger {
 }
 
 // ============================================================================
+// VALIDATION UTILITIES
+// ============================================================================
+
+class AuthValidator {
+  public static validate(state: AuthState): { isValid: boolean; error: string | null } {
+    const { mode, method, fields } = state;
+
+    if (mode === "signup") {
+      const cleanName = fields.name.trim();
+      if (!cleanName || cleanName.length < 2) {
+        return { isValid: false, error: "Display name must be at least 2 characters long." };
+      }
+    }
+
+    if (method === "email") {
+      const cleanEmail = fields.email.trim();
+      if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
+        return { isValid: false, error: "Please enter a valid email address." };
+      }
+    } else {
+      const cleanPhone = fields.phone.trim();
+      if (!cleanPhone || !PHONE_REGEX.test(cleanPhone)) {
+        return { isValid: false, error: "Invalid mobile number. Please enter 10 valid digits." };
+      }
+    }
+
+    if (!fields.password || fields.password.length < MIN_PASSWORD_LENGTH) {
+      return {
+        isValid: false,
+        error: `Password must contain at least ${MIN_PASSWORD_LENGTH} characters.`,
+      };
+    }
+
+    return { isValid: true, error: null };
+  }
+}
+
+// ============================================================================
+// API CLIENT DISPATCH SERVICE
+// ============================================================================
+
+async function executeRegistration(payload: { name: string; email: string; password: string }): Promise<void> {
+  const response = await fetch(REGISTER_API_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Account registration failed.");
+  }
+}
+
+async function executeCredentialsSignIn(
+  payload: Record<string, string | boolean>
+): Promise<SignInResponse | undefined> {
+  const result = await signIn("credentials", payload);
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+  return result;
+}
+
+// ============================================================================
 // MEMOIZED SUB-COMPONENTS
 // ============================================================================
 
 interface AuthHeaderProps {
-  mode: AuthMode;
+  readonly mode: AuthMode;
 }
 
 const AuthHeader = memo(({ mode }: AuthHeaderProps) => (
@@ -114,9 +253,9 @@ const AuthHeader = memo(({ mode }: AuthHeaderProps) => (
 AuthHeader.displayName = "AuthHeader";
 
 interface SocialAuthSectionProps {
-  isLoading: boolean;
-  isDisabled: boolean;
-  onGoogleLogin: () => void;
+  readonly isLoading: boolean;
+  readonly isDisabled: boolean;
+  readonly onGoogleLogin: () => void;
 }
 
 const SocialAuthSection = memo(({ isLoading, isDisabled, onGoogleLogin }: SocialAuthSectionProps) => (
@@ -153,147 +292,139 @@ const SocialAuthSection = memo(({ isLoading, isDisabled, onGoogleLogin }: Social
 SocialAuthSection.displayName = "SocialAuthSection";
 
 interface InputFieldProps {
-  id: string;
-  label: string;
-  type: string;
-  value: string;
-  placeholder: string;
-  disabled: boolean;
-  required?: boolean;
-  icon?: React.ReactNode;
-  prefix?: string;
-  hasError?: boolean;
-  describedBy?: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  readonly id: string;
+  readonly label: string;
+  readonly type: string;
+  readonly value: string;
+  readonly placeholder: string;
+  readonly disabled: boolean;
+  readonly required?: boolean;
+  readonly autoComplete?: string;
+  readonly icon?: React.ReactNode;
+  readonly prefix?: string;
+  readonly hasError?: boolean;
+  readonly describedBy?: string;
+  readonly onChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const InputField = memo(({ id, label, type, value, placeholder, disabled, required = true, icon, prefix, hasError, describedBy, onChange }: InputFieldProps) => (
-  <div className="space-y-1.5">
-    <label htmlFor={id} className="text-[10px] font-black uppercase text-[var(--text-light)] ml-3 tracking-widest block">
-      {label}
-    </label>
-    <div className="relative flex items-center">
-      {prefix && (
-        <div className="absolute left-3.5 z-10 bg-white/5 border border-white/10 px-2.5 py-1 rounded-xl font-black text-xs italic text-[var(--text-light)] select-none" aria-hidden="true">
-          {prefix}
-        </div>
-      )}
-      {icon && !prefix && (
-        <div className="absolute left-4 text-[var(--text-light)]/40 pointer-events-none" aria-hidden="true">
-          {icon}
-        </div>
-      )}
-      <input
-        id={id}
-        type={type}
-        required={required}
-        value={value}
-        disabled={disabled}
-        onChange={onChange}
-        placeholder={placeholder}
-        aria-invalid={hasError ? "true" : "false"}
-        aria-describedby={describedBy}
-        className={`w-full bg-[var(--bg-main)] border ${
-          hasError ? "border-red-500/80" : "border-white/10"
-        } focus:border-yellow-400/80 focus:bg-[var(--bg-accent)] outline-none rounded-2xl py-3.5 px-4 font-bold transition-all placeholder:text-[var(--text-light)]/30 shadow-inner text-[var(--text-main)] disabled:opacity-40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/50 ${
-          prefix ? "pl-16" : icon ? "pl-12" : "pl-4"
-        }`}
-      />
+const InputField = memo(
+  ({
+    id,
+    label,
+    type,
+    value,
+    placeholder,
+    disabled,
+    required = true,
+    autoComplete,
+    icon,
+    prefix,
+    hasError,
+    describedBy,
+    onChange,
+  }: InputFieldProps) => (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-[10px] font-black uppercase text-[var(--text-light)] ml-3 tracking-widest block">
+        {label}
+      </label>
+      <div className="relative flex items-center">
+        {prefix && (
+          <div
+            className="absolute left-3.5 z-10 bg-white/5 border border-white/10 px-2.5 py-1 rounded-xl font-black text-xs italic text-[var(--text-light)] select-none pointer-events-none"
+            aria-hidden="true"
+          >
+            {prefix}
+          </div>
+        )}
+        {icon && !prefix && (
+          <div className="absolute left-4 text-[var(--text-light)]/40 pointer-events-none" aria-hidden="true">
+            {icon}
+          </div>
+        )}
+        <input
+          id={id}
+          type={type}
+          required={required}
+          value={value}
+          disabled={disabled}
+          onChange={onChange}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          aria-invalid={hasError ? "true" : "false"}
+          aria-describedby={describedBy}
+          className={`w-full bg-[var(--bg-main)] border ${
+            hasError ? "border-red-500/80" : "border-white/10"
+          } focus:border-yellow-400/80 focus:bg-[var(--bg-accent)] outline-none rounded-2xl py-3.5 px-4 font-bold transition-all placeholder:text-[var(--text-light)]/30 shadow-inner text-[var(--text-main)] disabled:opacity-40 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/50 ${
+            prefix ? "pl-16" : icon ? "pl-12" : "pl-4"
+          }`}
+        />
+      </div>
     </div>
-  </div>
-));
+  )
+);
 InputField.displayName = "InputField";
 
+interface FormAlertProps {
+  readonly id: string;
+  readonly error: string | null;
+  readonly success: string | null;
+}
+
+const FormAlert = memo(({ id, error, success }: FormAlertProps) => (
+  <div id={id} aria-live="assertive" role="alert" className="space-y-2 pt-1">
+    {error && (
+      <div className="flex items-center gap-2 text-xs text-red-400 font-extrabold uppercase tracking-wider px-3 py-2.5 leading-relaxed bg-red-500/10 border border-red-500/20 rounded-xl">
+        <AlertCircle size={15} className="shrink-0" aria-hidden="true" />
+        <span>{error}</span>
+      </div>
+    )}
+    {success && (
+      <div className="flex items-center gap-2 text-xs text-emerald-400 font-extrabold uppercase tracking-wider px-3 py-2.5 leading-relaxed bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+        <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+        <span>{success}</span>
+      </div>
+    )}
+  </div>
+));
+FormAlert.displayName = "FormAlert";
+
 // ============================================================================
-// MAIN PAGE COMPONENT
+// MAIN LOGIN PAGE COMPONENT
 // ============================================================================
 
 export default function LoginPage() {
   const router = useRouter();
   const { status } = useSession();
-  
-  // Unique accessible IDs for form fields and alerts
+
+  // Unique accessible DOM identifiers
   const nameInputId = useId();
   const emailInputId = useId();
   const phoneInputId = useId();
   const passwordInputId = useId();
   const alertRegionId = useId();
 
-  const [state, setState] = useState<AuthenticationState>(INITIAL_STATE);
+  // Reducer-driven centralized auth state
+  const [state, dispatch] = useReducer(authReducer, INITIAL_STATE);
 
-  // Functional state mutation wrapper
-  const updateState = useCallback((updater: Partial<AuthenticationState> | ((prev: AuthenticationState) => AuthenticationState)) => {
-    setState((prev) => ({
-      ...prev,
-      ...(typeof updater === "function" ? updater(prev) : updater),
-    }));
-  }, []);
-
-  // Isolate field update triggers
+  // Field updates dispatcher
   const handleFieldChange = useCallback((field: keyof SystemFormFields, value: string) => {
-    setState((prev) => ({
-      ...prev,
-      fields: {
-        ...prev.fields,
-        [field]: value,
-      },
-      error: null, // Clear errors dynamically on input change
-    }));
+    dispatch({ type: "SET_FIELD", payload: { field, value } });
   }, []);
 
   // Auth Mode Switcher (Login <-> Signup)
   const toggleAuthMode = useCallback(() => {
-    setState((prev) => ({
-      ...INITIAL_STATE,
-      mode: prev.mode === "login" ? "signup" : "login",
-      method: prev.method,
-    }));
+    dispatch({ type: "TOGGLE_MODE" });
   }, []);
 
   // Method Switcher (Email <-> Phone)
   const toggleAuthMethod = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      method: prev.method === "email" ? "phone" : "email",
-      error: null,
-      success: null,
-    }));
+    dispatch({ type: "TOGGLE_METHOD" });
   }, []);
-
-  // Form Input Validator
-  const validateFormInputs = useCallback((): boolean => {
-    const { mode, method, fields } = state;
-
-    if (mode === "signup" && (!fields.name.trim() || fields.name.trim().length < 2)) {
-      updateState({ error: "Display name must be at least 2 characters long." });
-      return false;
-    }
-
-    if (method === "email") {
-      const cleanEmail = fields.email.trim();
-      if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
-        updateState({ error: "Please enter a valid email address." });
-        return false;
-      }
-    } else {
-      const cleanPhone = fields.phone.trim();
-      if (!cleanPhone || !PHONE_REGEX.test(cleanPhone)) {
-        updateState({ error: "Phone number failed E.164 parsing. Enter 10 valid digits." });
-        return false;
-      }
-    }
-
-    if (!fields.password || fields.password.length < MIN_PASSWORD_LENGTH) {
-      updateState({ error: `Security passwords must contain at least ${MIN_PASSWORD_LENGTH} characters.` });
-      return false;
-    }
-
-    return true;
-  }, [state, updateState]);
 
   // Federated NextAuth Google Handler
   const handleGoogleLogin = useCallback(async () => {
-    updateState({ isGoogleLoading: true, error: null, success: null });
+    dispatch({ type: "SET_GOOGLE_LOADING", payload: true });
+    dispatch({ type: "RESET_MESSAGES" });
     AuthLogger.info("Initiating Google Federated OAuth handshake");
 
     try {
@@ -304,36 +435,42 @@ export default function LoginPage() {
 
       if (result?.error) {
         AuthLogger.error("Google OAuth handshake rejected", result.error);
-        updateState({
-          error: "Google authentication failed or was cancelled.",
-          isGoogleLoading: false,
+        dispatch({
+          type: "SET_ERROR",
+          payload: "Google authentication failed or was cancelled.",
         });
+        dispatch({ type: "SET_GOOGLE_LOADING", payload: false });
         return;
       }
 
       if (result?.ok) {
         AuthLogger.info("Google OAuth handshake successful. Redirecting.");
-        updateState({ success: "Handshake authorized! Redirecting..." });
+        dispatch({ type: "SET_SUCCESS", payload: "Handshake authorized! Redirecting..." });
         router.refresh();
         router.replace(DEFAULT_REDIRECT_URL);
       }
     } catch (err) {
       AuthLogger.error("Critical Federated OAuth Runtime Error", err);
-      updateState({
-        error: "An unexpected OAuth failure occurred. Please try again.",
-        isGoogleLoading: false,
+      dispatch({
+        type: "SET_ERROR",
+        payload: "An unexpected OAuth failure occurred. Please try again.",
       });
+      dispatch({ type: "SET_GOOGLE_LOADING", payload: false });
     }
-  }, [router, updateState]);
+  }, [router]);
 
   // Unified Form Submission Handler
-  const handleFormSubmission = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmission = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    updateState({ error: null, success: null });
+    dispatch({ type: "RESET_MESSAGES" });
 
-    if (!validateFormInputs()) return;
+    const validation = AuthValidator.validate(state);
+    if (!validation.isValid) {
+      dispatch({ type: "SET_ERROR", payload: validation.error });
+      return;
+    }
 
-    updateState({ isSubmitting: true });
+    dispatch({ type: "SET_SUBMITTING", payload: true });
     const { mode, method, fields } = state;
 
     const name = fields.name.trim();
@@ -345,39 +482,13 @@ export default function LoginPage() {
       if (mode === "signup") {
         AuthLogger.info("Executing registration API request");
 
-        const registerResponse = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-          }),
-        });
-
-        const registerData = await registerResponse.json();
-        console.log(registerData);
-
-        if (!registerResponse.ok) {
-          throw new Error(registerData.message || "Account registration failed.");
-        }
+        await executeRegistration({ name, email, password });
 
         AuthLogger.info("Registration successful. Executing auto-login credentials handshake.");
 
-        // Automatically log in after successful registration
-        const loginResult = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
-        });
+        await executeCredentialsSignIn({ email, password, redirect: false });
 
-        if (loginResult?.error) {
-          throw new Error(loginResult.error);
-        }
-
-        updateState({ success: "Profile created! Initializing session..." });
+        dispatch({ type: "SET_SUCCESS", payload: "Profile created! Initializing session..." });
         router.push(DEFAULT_REDIRECT_URL);
         router.refresh();
         return;
@@ -386,26 +497,24 @@ export default function LoginPage() {
       // Login Flow
       AuthLogger.info("Executing primary credentials login authentication");
 
-      const credentialsPayload = {
+      const credentialsPayload: Record<string, string | boolean> = {
         redirect: false,
         password,
         callbackUrl: DEFAULT_REDIRECT_URL,
-        ...(method === "email" ? { email } : { phone }),
+        ...(method === "email" ? { email } : { phone: `+91${phone}` }),
       };
 
-      const loginResult = await signIn("credentials", credentialsPayload);
+      await executeCredentialsSignIn(credentialsPayload);
 
-      if (loginResult?.error) {
-        throw new Error(loginResult.error);
-      }
-
-      updateState({ success: "Session authenticated! Loading dashboard..." });
+      dispatch({ type: "SET_SUCCESS", payload: "Session authenticated! Loading dashboard..." });
       router.push(DEFAULT_REDIRECT_URL);
       router.refresh();
     } catch (err: unknown) {
       AuthLogger.error("Authentication Exception Encountered", err);
-      const message = err instanceof Error ? err.message : "Internal runtime failure. Session terminated.";
-      updateState({ error: message, isSubmitting: false });
+      const message =
+        err instanceof Error ? err.message : "Internal runtime failure. Session terminated.";
+      dispatch({ type: "SET_ERROR", payload: message });
+      dispatch({ type: "SET_SUBMITTING", payload: false });
     }
   };
 
@@ -424,7 +533,10 @@ export default function LoginPage() {
   // Render loader while validating NextAuth session
   if (status === "loading") {
     return (
-      <main className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col items-center justify-center p-6" aria-busy="true">
+      <main
+        className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col items-center justify-center p-6"
+        aria-busy="true"
+      >
         <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
         <p className="mt-4 text-xs font-black uppercase tracking-[0.3em] text-[var(--text-light)]">
           Verifying Identity Session...
@@ -439,17 +551,17 @@ export default function LoginPage() {
       <div className="absolute top-[-5%] right-[-5%] w-80 h-80 bg-yellow-400/10 rounded-full blur-[120px] pointer-events-none transform-gpu animate-pulse" />
       <div className="absolute bottom-[-5%] left-[-5%] w-80 h-80 bg-emerald-400/10 rounded-full blur-[120px] pointer-events-none transform-gpu" />
 
-      {/* Return Navigation Button */}
-      <Link 
-        href="/" 
+      {/* Return Navigation Link */}
+      <Link
+        href="/"
         className="absolute top-6 left-6 sm:top-8 sm:left-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-light)] hover:text-[var(--text-main)] transition-colors group focus-visible:outline focus-visible:outline-2 focus-visible:outline-yellow-400 rounded-lg p-1"
         aria-label="Return to primary landing home interface"
       >
-        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" aria-hidden="true" /> 
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
         Return to HQ
       </Link>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
@@ -457,18 +569,16 @@ export default function LoginPage() {
       >
         <AuthHeader mode={state.mode} />
 
-        {/* Main Interface Card Wrapper */}
+        {/* Card Container */}
         <section className="bg-[var(--glass-bg)] backdrop-blur-2xl border border-white/10 rounded-[36px] p-6 sm:p-8 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)]">
-          
-          <SocialAuthSection 
-            isLoading={state.isGoogleLoading} 
-            isDisabled={isInteractionDisabled} 
-            onGoogleLogin={handleGoogleLogin} 
+          <SocialAuthSection
+            isLoading={state.isGoogleLoading}
+            isDisabled={isInteractionDisabled}
+            onGoogleLogin={handleGoogleLogin}
           />
 
           {/* Core Authenticated Input Form */}
           <form onSubmit={handleFormSubmission} className="space-y-4 mt-6" noValidate>
-            
             {state.mode === "signup" && (
               <InputField
                 id={nameInputId}
@@ -476,6 +586,7 @@ export default function LoginPage() {
                 type="text"
                 value={state.fields.name}
                 placeholder="Enter display name"
+                autoComplete="name"
                 disabled={isInteractionDisabled}
                 icon={<User size={16} />}
                 hasError={Boolean(state.error && !state.fields.name.trim())}
@@ -499,6 +610,7 @@ export default function LoginPage() {
                     type="email"
                     value={state.fields.email}
                     placeholder="name@domain.io"
+                    autoComplete="email"
                     disabled={isInteractionDisabled}
                     icon={<AtSign size={16} />}
                     hasError={Boolean(state.error && !EMAIL_REGEX.test(state.fields.email.trim()))}
@@ -520,6 +632,7 @@ export default function LoginPage() {
                     type="tel"
                     value={state.fields.phone}
                     placeholder="98765 43210"
+                    autoComplete="tel-national"
                     disabled={isInteractionDisabled}
                     prefix="+91"
                     icon={<Phone size={16} />}
@@ -537,6 +650,7 @@ export default function LoginPage() {
               type="password"
               value={state.fields.password}
               placeholder="••••••••••••"
+              autoComplete={state.mode === "login" ? "current-password" : "new-password"}
               disabled={isInteractionDisabled}
               icon={<Lock size={16} />}
               hasError={Boolean(state.error && state.fields.password.length < MIN_PASSWORD_LENGTH)}
@@ -546,7 +660,7 @@ export default function LoginPage() {
 
             {/* Alternating Sub-method Switcher */}
             <div className="pt-1">
-              <button 
+              <button
                 type="button"
                 disabled={isInteractionDisabled}
                 onClick={toggleAuthMethod}
@@ -556,25 +670,12 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Accessible Status & Error Readout Area */}
-            <div id={alertRegionId} aria-live="assertive" role="alert" className="space-y-2 pt-1">
-              {state.error && (
-                <div className="flex items-center gap-2 text-xs text-red-400 font-extrabold uppercase tracking-wider px-3 py-2.5 leading-relaxed bg-red-500/10 border border-red-500/20 rounded-xl">
-                  <AlertCircle size={15} className="shrink-0" />
-                  <span>{state.error}</span>
-                </div>
-              )}
-              {state.success && (
-                <div className="flex items-center gap-2 text-xs text-emerald-400 font-extrabold uppercase tracking-wider px-3 py-2.5 leading-relaxed bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                  <CheckCircle2 size={15} className="shrink-0" />
-                  <span>{state.success}</span>
-                </div>
-              )}
-            </div>
+            {/* Status Announcement Area */}
+            <FormAlert id={alertRegionId} error={state.error} success={state.success} />
 
             {/* Form Submit Control Button */}
             <div className="pt-2">
-              <button 
+              <button
                 type="submit"
                 disabled={isInteractionDisabled}
                 className="w-full bg-[var(--text-main)] text-[var(--bg-main)] py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 group disabled:opacity-40 transform-gpu focus-visible:outline focus-visible:outline-2 focus-visible:outline-yellow-400"
@@ -592,10 +693,10 @@ export default function LoginPage() {
           </form>
         </section>
 
-        {/* Auth Mode Toggle Link */}
+        {/* Auth Mode Toggle Footer Link */}
         <footer className="text-center mt-6 text-xs font-semibold text-[var(--text-light)] select-none">
           {state.mode === "login" ? "No account registry profile?" : "Already registered user?"}{" "}
-          <button 
+          <button
             type="button"
             disabled={isInteractionDisabled}
             onClick={toggleAuthMode}
@@ -608,7 +709,7 @@ export default function LoginPage() {
 
       {/* Compliance Indicator Footer */}
       <footer role="note" className="mt-8 flex items-center gap-2 opacity-30 select-none pointer-events-none">
-        <CheckCircle2 size={14} className="text-[var(--text-main)]" />
+        <CheckCircle2 size={14} className="text-[var(--text-main)]" aria-hidden="true" />
         <span className="text-[9px] font-black uppercase tracking-[0.4em] text-[var(--text-main)]">
           End-To-End Encrypted Identity Pipeline
         </span>
