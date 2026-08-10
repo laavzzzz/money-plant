@@ -31,17 +31,17 @@ const BCRYPT_SALT_ROUNDS = 12;
 
 const ResetPasswordWorkflowSchema = z.object({
   email: z
-    .string({ required_error: "Email address is required." })
+    .string()
     .trim()
     .toLowerCase()
     .email({ message: "Invalid email address format." }),
   otp: z
-    .string({ required_error: "Verification code is required." })
+    .string()
     .trim()
     .length(6, { message: "The reset code must be exactly 6 digits." })
     .regex(/^\d+$/, { message: "The verification code must contain only digits." }),
   newPassword: z
-    .string({ required_error: "New password payload is required." })
+    .string()
     .min(8, { message: "Password must be at least 8 characters long." })
     .max(128, { message: "Password cannot exceed 128 characters." })
     .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter." })
