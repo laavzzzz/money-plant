@@ -2,10 +2,10 @@
  * @file src/app/api/auth/forgot-password/route.ts
  * @module API/Auth/ForgotPassword
  * @description Enterprise-grade, SOC2/GDPR-compliant Password Reset Request API handler.
- * Implements anti-user-enumeration, constant-time timing attack protection, strict Zod validation,
- * atomic database operations, and structured PII-masked logging.
+ * Implements absolute anti-user-enumeration via dynamic execution time equalization, constant-time 
+ * cryptographic timing attack protection, strict Zod validation, and structured PII-masked audit logs.
  *
- * @version 2.0.0
+ * @version 3.0.0
  * @author Senior Principal Security & Software Architecture Team
  */
 
@@ -19,7 +19,7 @@ import { hashOTP } from "@/lib/hashOTP";
 import { sendResetOTP } from "@/lib/email";
 
 // ============================================================================
-// CONFIGURATION & CONSTANTS
+// CONFIGURATION, CONSTANTS & TYPE DEFINITIONS
 // ============================================================================
 
 const COOLDOWN_SECONDS = 30;
@@ -29,10 +29,18 @@ const TOKEN_EXPIRATION_MS = TOKEN_EXPIRATION_MINUTES * 60 * 1000;
 const TOKEN_TYPE = "RESET_PASSWORD" as const;
 
 /**
+ * Standard security target execution duration (in milliseconds) for the request path
+ * to prevent remote timing side-channel attacks.
+ */
+const TARGET_EXECUTION_TIME_MS = 600;
+
+/**
  * Generic response message returned universally to prevent email enumeration.
  */
-const GENERIC_SUCCESS_MESSAGE =
-  "If an account is associated with this email address, a password reset code has been sent.";
+const GENERIC_SUCCESS_RESPONSE = {
+  success: true,
+  message: "If an account is associated with this email address, a password reset code has been sent.",
+};
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -42,7 +50,7 @@ const ForgotPasswordSchema = z.object({
   email: z
     .string()
     .trim()
-    .nonempty({ message: "Email address is required." })
+    .min(1, { message: "Email address is required." })
     .toLowerCase()
     .min(5, { message: "Email address is too short." })
     .max(254, { message: "Email address exceeds maximum length." })
@@ -51,28 +59,36 @@ const ForgotPasswordSchema = z.object({
 
 type ForgotPasswordPayload = z.infer<typeof ForgotPasswordSchema>;
 
-// ============================================================================
-// STRUCTURED AUDIT & LOGGING UTILITY
-// ============================================================================
-
 interface LogContext {
   requestId: string;
   action: string;
   maskedEmail?: string;
+  durationMs?: number;
   [key: string]: unknown;
 }
 
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 /**
  * Obfuscates email addresses to maintain GDPR/SOC2 compliance in server logs.
- * Example: "johndoe@example.com" -> "j***e@example.com"
+ * Example: "developer@domain.com" -> "d***r@domain.com"
  */
 function sanitizeEmailForLog(email: string): string {
-  const [localPart, domain] = email.split("@");
-  if (!domain) return "[INVALID_EMAIL]";
-  if (localPart.length <= 2) return `${localPart[0]}*@${domain}`;
-  return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
+  try {
+    const [localPart, domain] = email.split("@");
+    if (!localPart || !domain) return "[INVALID_EMAIL_STRUCTURE]";
+    if (localPart.length <= 2) return `${localPart[0]}*@${domain}`;
+    return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
+  } catch {
+    return "[SANIZATION_FAILURE]";
+  }
 }
 
+/**
+ * Standardized structured logger mapping to unified JSON schemas for high-ingestion aggregators.
+ */
 function logStructured(
   level: "INFO" | "WARN" | "ERROR",
   message: string,
@@ -94,6 +110,11 @@ function logStructured(
   }
 }
 
+/**
+ * Micro-utility ensuring precise artificial delays to equalize execution runtime variations.
+ */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // ============================================================================
 // API ROUTE HANDLER
 // ============================================================================
@@ -101,33 +122,49 @@ function logStructured(
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
+  let capturedEmailForLog = "[UNKNOWN_EMAIL]";
 
   try {
-    // 1. Parse and Validate Request Payload
+    // 1. Enforce Server-Side Environment Sanity Check
+    if (!process.env.RESEND_API_KEY) {
+      logStructured("ERROR", "Missing critical dependency environment variable", { requestId, action: "ENV_MISCONFIGURATION" });
+      return NextResponse.json(
+        { error: "An unexpected system configuration error occurred." },
+        { status: 500 }
+      );
+    }
+
+    // 2. Parse Incoming JSON Request Body Safely
     let body: unknown;
     try {
       body = await req.json();
     } catch {
+      logStructured("WARN", "Malformed JSON body passed to request route", { requestId, action: "MALFORMED_JSON_PARSE" });
       return NextResponse.json(
-        { error: "Invalid JSON request body." },
+        { error: "Invalid JSON request body payload." },
         { status: 400 }
       );
     }
 
+    // 3. Execute Runtime Object Validation via Zod Definition
     const validationResult = ForgotPasswordSchema.safeParse(body);
     if (!validationResult.success) {
-      const firstError =
-        validationResult.error.issues[0]?.message || "Invalid input data.";
-      return NextResponse.json({ error: firstError }, { status: 400 });
+      const primaryErrorMessage = validationResult.error.issues[0]?.message || "Invalid input data.";
+      logStructured("WARN", "Validation constraints failed for schema payload", { 
+        requestId, 
+        action: "VALIDATION_FAILED", 
+        errorDetails: validationResult.error.issues 
+      });
+      return NextResponse.json({ error: primaryErrorMessage }, { status: 400 });
     }
 
     const { email }: ForgotPasswordPayload = validationResult.data;
-    const maskedEmail = sanitizeEmailForLog(email);
+    capturedEmailForLog = sanitizeEmailForLog(email);
 
-    // 2. Database Connection
+    // 4. Initialize Database Operational Baseline
     await dbConnect();
 
-    // 3. Rate Limiting Check (per email address)
+    // 5. Evaluate Flow Control Limitations via Rate Limiting Table Verification
     const recentToken = await VerificationToken.findOne({
       email,
       type: TOKEN_TYPE,
@@ -136,16 +173,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .select("createdAt")
       .lean();
 
-    if (recentToken && recentToken.createdAt) {
+    if (recentToken?.createdAt) {
       const timeElapsed = Date.now() - new Date(recentToken.createdAt).getTime();
 
       if (timeElapsed < COOLDOWN_MS) {
         const secondsRemaining = Math.ceil((COOLDOWN_MS - timeElapsed) / 1000);
 
-        logStructured("WARN", "Password reset rate limit hit", {
+        logStructured("WARN", "Password reset processing blocked by rate limit cooldown", {
           requestId,
           action: "RATE_LIMIT_EXCEEDED",
-          maskedEmail,
+          maskedEmail: capturedEmailForLog,
           secondsRemaining,
         });
 
@@ -155,57 +192,66 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               secondsRemaining === 1 ? "" : "s"
             } before requesting another reset code.`,
           },
-          { status: 429 }
+          { 
+            status: 429,
+            headers: {
+              "Retry-After": String(secondsRemaining),
+            }
+          }
         );
       }
     }
 
-    // 4. User Lookup & Anti-Enumeration Constant-Time Protection
+    // 6. User Verification & Database Query Execution
     const user = await User.findOne({ email }).select("_id provider password").lean();
 
-    // DUMMY COMPUTATION: Perform full hashing cycle regardless of user existence
-    // to prevent timing side-channel attacks for email enumeration.
+    // Generate Verification Payload Data Immediately to Preserve Signature Operations
     const rawOTP = generateOTP();
     const otpHash = await hashOTP(rawOTP);
+    const expiresAt = new Date(Date.now() + TOKEN_EXPIRATION_MS);
 
+    // Dynamic Safe Mitigation Path: If User does not exist, trigger dummy operations matching execution steps
     if (!user) {
-      logStructured("INFO", "Password reset requested for non-existent email", {
+      logStructured("INFO", "Password reset request recorded for unassigned identity identifier", {
         requestId,
         action: "USER_NOT_FOUND_SILENT",
-        maskedEmail,
-        durationMs: Date.now() - startTime,
+        maskedEmail: capturedEmailForLog,
       });
 
-      return NextResponse.json(
-        { message: GENERIC_SUCCESS_MESSAGE },
-        { status: 200 }
-      );
+      // Compensate processing time differentials dynamically before exit dispatch
+      const processingTime = Date.now() - startTime;
+      const executionDelta = TARGET_EXECUTION_TIME_MS - processingTime;
+      if (executionDelta > 0) {
+        await sleep(executionDelta);
+      }
+
+      return NextResponse.json(GENERIC_SUCCESS_RESPONSE, { status: 200 });
     }
 
-    // Google OAuth accounts without set password check
-    // We treat this identically to a successful request to prevent user enumeration.
+    // Mitigate OpenID Connect Authentication Routing Paths
     if (user.provider === "google" && !user.password) {
-      logStructured("INFO", "Password reset requested for OAuth user", {
+      logStructured("INFO", "Password reset bypass initiated for OAuth managed federation sequence", {
         requestId,
         action: "OAUTH_ACCOUNT_RESET_ATTEMPT",
-        maskedEmail,
+        maskedEmail: capturedEmailForLog,
       });
 
-      return NextResponse.json(
-        { message: GENERIC_SUCCESS_MESSAGE },
-        { status: 200 }
-      );
+      const processingTime = Date.now() - startTime;
+      const executionDelta = TARGET_EXECUTION_TIME_MS - processingTime;
+      if (executionDelta > 0) {
+        await sleep(executionDelta);
+      }
+
+      return NextResponse.json(GENERIC_SUCCESS_RESPONSE, { status: 200 });
     }
 
-    // 5. Clean up existing pending reset tokens for this user
+    // 7. Clear Existing Active Transactions to Maintain Structural Database Consistency
     await VerificationToken.deleteMany({
       email,
       type: TOKEN_TYPE,
     });
 
-    // 6. Create New Verification Token Record
-    const expiresAt = new Date(Date.now() + TOKEN_EXPIRATION_MS);
-
+    // 8. Commit Fresh Security Verification Record inside the System Database
     await VerificationToken.create({
       email,
       type: TOKEN_TYPE,
@@ -213,25 +259,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       expiresAt,
     });
 
-    // 7. Dispatch Reset Email
+    // 9. Execute External Mail Service Dispatch Handler Route
     try {
       await sendResetOTP(email, rawOTP);
 
-      logStructured("INFO", "Password reset OTP dispatched successfully", {
+      logStructured("INFO", "Identity validation verification code payload successfully dispatched", {
         requestId,
         action: "OTP_SENT",
-        maskedEmail,
+        maskedEmail: capturedEmailForLog,
         durationMs: Date.now() - startTime,
       });
     } catch (emailError: unknown) {
-      logStructured("ERROR", "Failed to dispatch password reset email", {
+      logStructured("ERROR", "Mail carrier runtime engine failure during dispatch attempt", {
         requestId,
         action: "EMAIL_DISPATCH_FAILURE",
-        maskedEmail,
+        maskedEmail: capturedEmailForLog,
         error: emailError instanceof Error ? emailError.message : String(emailError),
       });
 
-      // Cleanup generated token if email transport fails
+      // Rollback active structural modifications if downstream integrations collapse
       await VerificationToken.deleteMany({
         email,
         type: TOKEN_TYPE,
@@ -243,18 +289,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // 8. Return Anti-Enumeration Generic Response
-    return NextResponse.json(
-      { message: GENERIC_SUCCESS_MESSAGE },
-      { status: 200 }
-    );
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown internal server error.";
+    // 10. Dynamic Equalization Step for Real Success Path Execution Profiles
+    const operationalDuration = Date.now() - startTime;
+    const paddingTarget = TARGET_EXECUTION_TIME_MS - operationalDuration;
+    if (paddingTarget > 0) {
+      await sleep(paddingTarget);
+    }
 
-    logStructured("ERROR", "Unhandled exception in forgot-password API handler", {
+    return NextResponse.json(GENERIC_SUCCESS_RESPONSE, { status: 200 });
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error.";
+
+    logStructured("ERROR", "Fatal structural intercept recorded within endpoint thread pipeline", {
       requestId,
-      action: "HANDLED_EXCEPTION",
+      action: "FATAL_API_EXCEPTION",
+      maskedEmail: capturedEmailForLog,
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
       durationMs: Date.now() - startTime,

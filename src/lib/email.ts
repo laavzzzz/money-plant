@@ -6,13 +6,42 @@ if (!process.env.RESEND_API_KEY) {
 
 export const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = process.env.EMAIL_FROM || "MoneyPlant <onboarding@resend.dev>";
+// Fallback to Resend onboarding email ONLY for strict local development sandbox usage.
+const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
+
+/**
+ * Validates the Resend API payload and throws explicit errors if the dispatch fails.
+ */
+async function sendSecureEmail(payload: { from: string; to: string; subject: string; html: string }) {
+  try {
+    const { data, error } = await resend.emails.send(payload);
+
+    if (error) {
+      console.error("❌ [Resend API Error]:", error);
+      
+      // Provide actionable feedback for the common testing domain constraint
+      if (payload.from === "onboarding@resend.dev") {
+        console.warn(
+          "⚠️  DEVELOPER NOTE: 'onboarding@resend.dev' can ONLY send emails to the primary email account used to register your Resend developer dashboard. Testing with secondary accounts will fail."
+        );
+      }
+      
+      throw new Error(`Email dispatch failed: ${error.message} (${error.name})`);
+    }
+
+    console.log(`✅ Email successfully dispatched to ${payload.to}. ID: ${data?.id}`);
+    return data;
+  } catch (err) {
+    console.error(`❌ [Internal Mail Transport Error]: Failing to send email to ${payload.to}:`, err);
+    throw err;
+  }
+}
 
 /**
  * Sends a 6-digit email verification code during signup.
  */
 export async function sendVerificationOTP(email: string, otp: string) {
-  return await resend.emails.send({
+  return await sendSecureEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Verify your MoneyPlant account 🌱",
@@ -33,7 +62,7 @@ export async function sendVerificationOTP(email: string, otp: string) {
  * Sends a 6-digit password reset OTP code.
  */
 export async function sendResetOTP(email: string, otp: string) {
-  return await resend.emails.send({
+  return await sendSecureEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Reset your MoneyPlant password",
@@ -54,7 +83,7 @@ export async function sendResetOTP(email: string, otp: string) {
  * Sends an optional welcome email after successful account verification.
  */
 export async function sendWelcomeEmail(email: string, name: string) {
-  return await resend.emails.send({
+  return await sendSecureEmail({
     from: FROM_EMAIL,
     to: email,
     subject: "Welcome aboard! Let's grow your money 🌱",
