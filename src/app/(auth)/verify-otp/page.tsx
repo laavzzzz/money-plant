@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShieldCheck, ArrowRight, RotateCcw, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { OTPInput } from "@/components/auth/OTPInput";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
-export default function VerifyOTPPage() {
+function VerifyOTPContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -240,5 +240,13 @@ export default function VerifyOTPPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-500">Loading verification page...</div>}>
+      <VerifyOTPContent />
+    </Suspense>
   );
 }
