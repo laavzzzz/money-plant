@@ -27,13 +27,13 @@ if (!globalWithCache.mongooseCache) {
 
 const MONGO_PROBE_MS = 1500;
 
-function useLocalOnly(): boolean {
+function getIsLocalOnly(): boolean {
   const flag = process.env.USE_LOCAL_DATA?.toLowerCase();
   return flag === "1" || flag === "true" || flag === "yes";
 }
 
 export async function tryMongoConnect(): Promise<boolean> {
-  if (useLocalOnly()) return false;
+  if (getIsLocalOnly()) return false;
   if (cached.failed) return false;
   if (cached.conn?.connection?.readyState === 1) return true;
 

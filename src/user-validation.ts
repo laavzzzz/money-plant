@@ -43,7 +43,7 @@ export async function validateVerifiedUser(userIdentifier: string): Promise<IUse
   }
 
   // 4. Anti-Mock Check
-  const isMock = user.phone.startsWith("555") || user.name.toLowerCase().includes("demo");
+  const isMock = (user.phone?.startsWith("555") ?? false) || user.name?.toLowerCase().includes("demo");
   if (isMock) {
      throw new VerificationError("Action Forbidden: Demo accounts cannot perform real transactions.");
   }
