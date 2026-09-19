@@ -4,7 +4,7 @@
  * verification state enforcement, role-based access control (RBAC), open redirect prevention,
  * strict CSP compatibility, security headers, and audit telemetry.
  * * @module middleware
- * @version 3.2.0
+ * @version 3.3.0
  */
 
 import { NextResponse } from "next/server";
@@ -22,6 +22,7 @@ export interface ExtendedJWT {
   email?: string;
   role?: UserRole;
   isVerified?: boolean;
+  provider?: string;
   [key: string]: unknown;
 }
 
@@ -90,6 +91,13 @@ const ROUTE_RULES = {
     { path: "/dashboard", requireVerification: true },
     { path: "/profile", requireVerification: true },
     { path: "/settings", requireVerification: true },
+    { path: "/analytics", requireVerification: true },
+    { path: "/garden", requireVerification: true },
+    { path: "/goals", requireVerification: true },
+    { path: "/history", requireVerification: true },
+    { path: "/leaderboard", requireVerification: true },
+    { path: "/transactions", requireVerification: true },
+    { path: "/wishlist", requireVerification: true },
     { path: "/api/protected", requireVerification: true },
   ] as const satisfies readonly RouteRule[],
 
@@ -241,7 +249,7 @@ function generateSecurityHeaders(nonce: string, requestId: string): Headers {
 
   const cspHeader = [
     `default-src 'self'`,
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data:`,
@@ -315,7 +323,9 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   const isAuthenticated = Boolean(token);
-  const isVerified = Boolean(token?.isVerified);
+  
+  // Google/OAuth sign-ins default to verified unless explicitly set false
+  const isVerified = token?.isVerified !== undefined ? Boolean(token.isVerified) : true;
   const userRole: UserRole = token?.role || "USER";
 
   const isGuestOnlyPath = matchesPrefix(pathname, ROUTE_RULES.GUEST_ONLY);
