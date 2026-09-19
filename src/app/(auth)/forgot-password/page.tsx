@@ -1,16 +1,16 @@
 /**
- * @file C:\Users\KIIT0001\Desktop\PLACEMENT\moneyplant\money-plant\src\app\(auth)\forgot-password\page.tsx
+ * @file src/app/(auth)/forgot-password/page.tsx
  * @module Auth/ForgotPasswordPage
  * @description Enterprise-grade, WCAG 2.1 AA compliant Forgot Password UI component with
  * 2-step OTP validation, new password submission, strict schema validation, dynamic
  * countdown timers, accessible ARIA live regions, and resilient fetch abstractions.
  * 
- * @version 3.1.0
+ * @version 3.2.0
  */
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useId } from "react";
+import React, { useState, useEffect, useCallback, useId, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -203,6 +203,7 @@ async function verifyOtpAndResetPassword(
 
 export default function ForgotPasswordPage(): React.ReactElement {
   const router = useRouter();
+  const mountedRef = useRef<boolean>(true);
 
   // Accessibility Unique IDs
   const emailInputId = useId();
@@ -218,6 +219,14 @@ export default function ForgotPasswordPage(): React.ReactElement {
   const [resetSuccess, setResetSuccess] = useState<boolean>(false);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const [showPassword, setShowPassword] = useState<boolean>(false);
+
+  // Mount tracking cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Form Initializations: Step 1 (Request OTP)
   const {
@@ -248,7 +257,9 @@ export default function ForgotPasswordPage(): React.ReactElement {
     if (cooldownRemaining <= 0) return;
 
     const timer = setInterval(() => {
-      setCooldownRemaining((prev) => prev - 1);
+      if (mountedRef.current) {
+        setCooldownRemaining((prev) => Math.max(0, prev - 1));
+      }
     }, 1000);
 
     return () => clearInterval(timer);
@@ -260,13 +271,19 @@ export default function ForgotPasswordPage(): React.ReactElement {
   const processResetRequest = useCallback(
     async (values: RequestOtpFormValues) => {
       setServerError(null);
+      const cleanEmail = values.email.trim().toLowerCase();
 
       try {
-        await sendPasswordResetEmail(values.email);
-        setSubmittedEmail(values.email);
-        setStep("verify");
-        setCooldownRemaining(RESEND_COOLDOWN_SECONDS);
+        await sendPasswordResetEmail(cleanEmail);
+        
+        if (mountedRef.current) {
+          setSubmittedEmail(cleanEmail);
+          setStep("verify");
+          setCooldownRemaining(RESEND_COOLDOWN_SECONDS);
+        }
       } catch (err: unknown) {
+        if (!mountedRef.current) return;
+
         if (err instanceof AuthApiError) {
           if (err.statusCode === 429) {
             setServerError("Too many requests. Please wait a few minutes before trying again.");
@@ -291,11 +308,16 @@ export default function ForgotPasswordPage(): React.ReactElement {
       try {
         await verifyOtpAndResetPassword(
           submittedEmail,
-          values.otp,
+          values.otp.trim(),
           values.newPassword
         );
-        setResetSuccess(true);
+        
+        if (mountedRef.current) {
+          setResetSuccess(true);
+        }
       } catch (err: unknown) {
+        if (!mountedRef.current) return;
+
         if (err instanceof AuthApiError) {
           setServerError(err.message);
         } else {
@@ -315,8 +337,13 @@ export default function ForgotPasswordPage(): React.ReactElement {
     setServerError(null);
     try {
       await sendPasswordResetEmail(submittedEmail);
-      setCooldownRemaining(RESEND_COOLDOWN_SECONDS);
+      
+      if (mountedRef.current) {
+        setCooldownRemaining(RESEND_COOLDOWN_SECONDS);
+      }
     } catch (err: unknown) {
+      if (!mountedRef.current) return;
+
       if (err instanceof AuthApiError) {
         setServerError(err.message);
       } else {

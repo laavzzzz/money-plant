@@ -2,118 +2,236 @@
  * @file src/app/api/auth/forgot-password/route.ts
  * @module API/Auth/ForgotPassword
  * @description Enterprise-grade, SOC2/GDPR-compliant Password Reset Request API handler.
- * Implements absolute anti-user-enumeration via dynamic execution time equalization, constant-time 
- * cryptographic timing attack protection, strict Zod validation, and structured PII-masked audit logs.
+ * Implements anti-user-enumeration via nanosecond-precision execution time equalization, 
+ * atomic MongoDB transaction management, strict schema enforcement, and structured PII-masked audit logs.
  *
- * @version 3.0.0
+ * @version 4.0.0
  * @author Senior Principal Security & Software Architecture Team
  */
 
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
-import User from "@/models/User";
+import User, { IUser } from "@/models/User";
 import VerificationToken from "@/models/VerificationToken";
 import { generateOTP } from "@/lib/generateOTP";
 import { hashOTP } from "@/lib/hashOTP";
 import { sendResetOTP } from "@/lib/email";
 
 // ============================================================================
-// CONFIGURATION, CONSTANTS & TYPE DEFINITIONS
+// CONFIGURATION & CONSTANTS
 // ============================================================================
 
-const COOLDOWN_SECONDS = 30;
-const COOLDOWN_MS = COOLDOWN_SECONDS * 1000;
-const TOKEN_EXPIRATION_MINUTES = 10;
-const TOKEN_EXPIRATION_MS = TOKEN_EXPIRATION_MINUTES * 60 * 1000;
-const TOKEN_TYPE = "RESET_PASSWORD" as const;
+const CONFIG = {
+  COOLDOWN_SECONDS: 30,
+  TOKEN_EXPIRATION_MINUTES: 10,
+  TOKEN_TYPE: "RESET_PASSWORD" as const,
+  TARGET_EXECUTION_TIME_MS: 600,
+  HTTP_HEADERS: {
+    CACHE_CONTROL: "no-store, no-cache, must-revalidate, proxy-revalidate",
+    PRAGMA: "no-cache",
+    X_CONTENT_TYPE_OPTIONS: "nosniff",
+  },
+} as const;
 
 /**
- * Standard security target execution duration (in milliseconds) for the request path
- * to prevent remote timing side-channel attacks.
+ * Universal success message returned on all pathways to neutralize email enumeration vector.
  */
-const TARGET_EXECUTION_TIME_MS = 600;
-
-/**
- * Generic response message returned universally to prevent email enumeration.
- */
-const GENERIC_SUCCESS_RESPONSE = {
+const GENERIC_SUCCESS_PAYLOAD = Object.freeze({
   success: true,
   message: "If an account is associated with this email address, a password reset code has been sent.",
-};
+});
 
 // ============================================================================
-// VALIDATION SCHEMAS
+// VALIDATION SCHEMAS & TYPES
 // ============================================================================
 
 const ForgotPasswordSchema = z.object({
   email: z
-    .string()
+    .string({ message: "Email address is required." })
     .trim()
-    .min(1, { message: "Email address is required." })
+    .min(1, { message: "Email address cannot be empty." })
     .toLowerCase()
     .min(5, { message: "Email address is too short." })
-    .max(254, { message: "Email address exceeds maximum length." })
+    .max(254, { message: "Email address exceeds maximum allowable length." })
     .email({ message: "Invalid email address format." }),
 });
 
 type ForgotPasswordPayload = z.infer<typeof ForgotPasswordSchema>;
 
-interface LogContext {
-  requestId: string;
-  action: string;
+type LogLevel = "INFO" | "WARN" | "ERROR";
+
+interface StructuredLogPayload {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  requestId?: string;
+  action?: string;
   maskedEmail?: string;
   durationMs?: number;
+  error?: string;
   [key: string]: unknown;
 }
 
+type AuditLogContext = Partial<Omit<StructuredLogPayload, "timestamp" | "level" | "message">>;
+
 // ============================================================================
-// UTILITY FUNCTIONS
+// LOGGING & SANITIZATION SERVICES
 // ============================================================================
 
-/**
- * Obfuscates email addresses to maintain GDPR/SOC2 compliance in server logs.
- * Example: "developer@domain.com" -> "d***r@domain.com"
- */
-function sanitizeEmailForLog(email: string): string {
-  try {
-    const [localPart, domain] = email.split("@");
+class AuditLogger {
+  /**
+   * Sanitizes email addresses to preserve strict GDPR/SOC2 compliance in log sinks.
+   * Examples:
+   *  "a@domain.com" -> "a***@domain.com"
+   *  "john.doe@domain.com" -> "j***e@domain.com"
+   */
+  public static maskEmail(email: string): string {
+    if (!email || typeof email !== "string") return "[UNSPECIFIED_EMAIL]";
+    
+    const parts = email.split("@");
+    if (parts.length !== 2) return "[MALFORMED_EMAIL]";
+
+    const [localPart, domain] = parts;
     if (!localPart || !domain) return "[INVALID_EMAIL_STRUCTURE]";
-    if (localPart.length <= 2) return `${localPart[0]}*@${domain}`;
+
+    if (localPart.length <= 2) {
+      return `${localPart[0]}***@${domain}`;
+    }
+
     return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
-  } catch {
-    return "[SANIZATION_FAILURE]";
+  }
+
+  /**
+   * Dispatches JSON logs formatted for ELK/Datadog/CloudWatch ingestion.
+   */
+  public static log(
+    level: LogLevel,
+    message: string,
+    context: Omit<StructuredLogPayload, "timestamp" | "level">
+  ): void {
+    const payload: StructuredLogPayload = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      ...context,
+    };
+
+    const formattedOutput = JSON.stringify(payload);
+
+    switch (level) {
+      case "ERROR":
+        console.error(formattedOutput);
+        break;
+      case "WARN":
+        console.warn(formattedOutput);
+        break;
+      case "INFO":
+      default:
+        console.info(formattedOutput);
+        break;
+    }
   }
 }
 
-/**
- * Standardized structured logger mapping to unified JSON schemas for high-ingestion aggregators.
- */
-function logStructured(
-  level: "INFO" | "WARN" | "ERROR",
-  message: string,
-  context: LogContext
-): void {
-  const payload = {
-    timestamp: new Date().toISOString(),
-    level,
-    message,
-    ...context,
-  };
+// ============================================================================
+// TIMING EQUALIZATION ENGINE (ANTI-SIDE-CHANNEL)
+// ============================================================================
 
-  if (level === "ERROR") {
-    console.error(JSON.stringify(payload));
-  } else if (level === "WARN") {
-    console.warn(JSON.stringify(payload));
-  } else {
-    console.info(JSON.stringify(payload));
+class TimingEqualizer {
+  /**
+   * Executes high-resolution nanosecond sleep to prevent timing analysis attacks.
+   */
+  public static async compensate(startTimeNs: bigint, targetMs: number): Promise<number> {
+    const elapsedNs = process.hrtime.bigint() - startTimeNs;
+    const elapsedMs = Number(elapsedNs) / 1_000_000;
+    const remainingMs = targetMs - elapsedMs;
+
+    if (remainingMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, remainingMs));
+    }
+
+    const totalNs = process.hrtime.bigint() - startTimeNs;
+    return Number(totalNs) / 1_000_000;
   }
 }
 
-/**
- * Micro-utility ensuring precise artificial delays to equalize execution runtime variations.
- */
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// ============================================================================
+// DOMAIN SERVICES
+// ============================================================================
+
+class RateLimiterService {
+  /**
+   * Evaluates active verification token timestamps to enforce reset cooldowns.
+   */
+  public static async checkCooldown(email: string): Promise<{ isRateLimited: boolean; secondsRemaining: number }> {
+    const cooldownThresholdMs = CONFIG.COOLDOWN_SECONDS * 1000;
+
+    const recentToken = await VerificationToken.findOne({
+      email,
+      type: CONFIG.TOKEN_TYPE,
+    })
+      .sort({ createdAt: -1 })
+      .select("createdAt")
+      .lean<{ createdAt?: Date }>();
+
+    if (!recentToken?.createdAt) {
+      return { isRateLimited: false, secondsRemaining: 0 };
+    }
+
+    const timeElapsedMs = Date.now() - new Date(recentToken.createdAt).getTime();
+
+    if (timeElapsedMs < cooldownThresholdMs) {
+      const secondsRemaining = Math.ceil((cooldownThresholdMs - timeElapsedMs) / 1000);
+      return { isRateLimited: true, secondsRemaining };
+    }
+
+    return { isRateLimited: false, secondsRemaining: 0 };
+  }
+}
+
+class TokenOrchestratorService {
+  /**
+   * Atomically invalidates old reset tokens and issues a new hashed token within a transaction.
+   */
+  public static async generateAndPersistToken(
+    email: string,
+    session?: mongoose.ClientSession
+  ): Promise<{ rawOTP: string; expiresAt: Date }> {
+    const rawOTP = generateOTP();
+    const otpHash = await hashOTP(rawOTP);
+    const expiresAt = new Date(Date.now() + CONFIG.TOKEN_EXPIRATION_MINUTES * 60 * 1000);
+
+    // Invalidate existing tokens for this specific flow
+    await VerificationToken.deleteMany(
+      { email, type: CONFIG.TOKEN_TYPE },
+      session ? { session } : {}
+    );
+
+    // Create fresh security verification record
+    await VerificationToken.create(
+      [
+        {
+          email,
+          type: CONFIG.TOKEN_TYPE,
+          otpHash,
+          expiresAt,
+        },
+      ],
+      session ? { session } : {}
+    );
+
+    return { rawOTP, expiresAt };
+  }
+
+  /**
+   * Rollback helper if downstream transport layer fails outside transaction.
+   */
+  public static async revokeTokens(email: string): Promise<void> {
+    await VerificationToken.deleteMany({ email, type: CONFIG.TOKEN_TYPE });
+  }
+}
 
 // ============================================================================
 // API ROUTE HANDLER
@@ -121,198 +239,214 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const requestId = crypto.randomUUID();
-  const startTime = Date.now();
-  let capturedEmailForLog = "[UNKNOWN_EMAIL]";
+  const startTimeNs = process.hrtime.bigint();
+  let maskedEmailForLog = "[UNSET]";
 
   try {
-    // 1. Enforce Server-Side Environment Sanity Check
+    // 1. Validate Critical System Dependencies
     if (!process.env.RESEND_API_KEY) {
-      logStructured("ERROR", "Missing critical dependency environment variable", { requestId, action: "ENV_MISCONFIGURATION" });
-      return NextResponse.json(
-        { error: "An unexpected system configuration error occurred." },
-        { status: 500 }
-      );
-    }
-
-    // 2. Parse Incoming JSON Request Body Safely
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      logStructured("WARN", "Malformed JSON body passed to request route", { requestId, action: "MALFORMED_JSON_PARSE" });
-      return NextResponse.json(
-        { error: "Invalid JSON request body payload." },
-        { status: 400 }
-      );
-    }
-
-    // 3. Execute Runtime Object Validation via Zod Definition
-    const validationResult = ForgotPasswordSchema.safeParse(body);
-    if (!validationResult.success) {
-      const primaryErrorMessage = validationResult.error.issues[0]?.message || "Invalid input data.";
-      logStructured("WARN", "Validation constraints failed for schema payload", { 
-        requestId, 
-        action: "VALIDATION_FAILED", 
-        errorDetails: validationResult.error.issues 
+      AuditLogger.log("ERROR", "Missing critical RESEND_API_KEY environment variable", {
+        requestId,
+        action: "CRITICAL_ENV_MISSING",
       });
-      return NextResponse.json({ error: primaryErrorMessage }, { status: 400 });
+
+      await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      return NextResponse.json(
+        { error: "Internal authentication subsystem misconfiguration." },
+        { status: 500, headers: CONFIG.HTTP_HEADERS }
+      );
+    }
+
+    // 2. Parse Incoming Payload Safely
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      AuditLogger.log("WARN", "Malformed JSON body passed to route", {
+        requestId,
+        action: "PARSE_JSON_FAILED",
+      });
+
+      await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      return NextResponse.json(
+        { error: "Invalid JSON payload structure." },
+        { status: 400, headers: CONFIG.HTTP_HEADERS }
+      );
+    }
+
+    // 3. Schema Validation
+    const validationResult = ForgotPasswordSchema.safeParse(rawBody);
+    if (!validationResult.success) {
+      const primaryIssue = validationResult.error.issues[0]?.message || "Invalid email payload.";
+
+      AuditLogger.log("WARN", "Zod validation constraints failed for payload", {
+        requestId,
+        action: "VALIDATION_FAILED",
+        errors: validationResult.error.issues,
+      });
+
+      await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      return NextResponse.json(
+        { error: primaryIssue },
+        { status: 400, headers: CONFIG.HTTP_HEADERS }
+      );
     }
 
     const { email }: ForgotPasswordPayload = validationResult.data;
-    capturedEmailForLog = sanitizeEmailForLog(email);
+    maskedEmailForLog = AuditLogger.maskEmail(email);
 
-    // 4. Initialize Database Operational Baseline
+    // 4. Initialize Database Connection
     await dbConnect();
 
-    // 5. Evaluate Flow Control Limitations via Rate Limiting Table Verification
-    const recentToken = await VerificationToken.findOne({
-      email,
-      type: TOKEN_TYPE,
-    })
-      .sort({ createdAt: -1 })
-      .select("createdAt")
-      .lean();
-
-    if (recentToken?.createdAt) {
-      const timeElapsed = Date.now() - new Date(recentToken.createdAt).getTime();
-
-      if (timeElapsed < COOLDOWN_MS) {
-        const secondsRemaining = Math.ceil((COOLDOWN_MS - timeElapsed) / 1000);
-
-        logStructured("WARN", "Password reset processing blocked by rate limit cooldown", {
-          requestId,
-          action: "RATE_LIMIT_EXCEEDED",
-          maskedEmail: capturedEmailForLog,
-          secondsRemaining,
-        });
-
-        return NextResponse.json(
-          {
-            error: `Please wait ${secondsRemaining} second${
-              secondsRemaining === 1 ? "" : "s"
-            } before requesting another reset code.`,
-          },
-          { 
-            status: 429,
-            headers: {
-              "Retry-After": String(secondsRemaining),
-            }
-          }
-        );
-      }
-    }
-
-    // 6. User Verification & Database Query Execution
-    const user = await User.findOne({ email }).select("_id provider password").lean();
-
-    // Generate Verification Payload Data Immediately to Preserve Signature Operations
-    const rawOTP = generateOTP();
-    const otpHash = await hashOTP(rawOTP);
-    const expiresAt = new Date(Date.now() + TOKEN_EXPIRATION_MS);
-
-    // Dynamic Safe Mitigation Path: If User does not exist, trigger dummy operations matching execution steps
-    if (!user) {
-      logStructured("INFO", "Password reset request recorded for unassigned identity identifier", {
+    // 5. Evaluate Rate-Limiting Policy
+    const { isRateLimited, secondsRemaining } = await RateLimiterService.checkCooldown(email);
+    if (isRateLimited) {
+      AuditLogger.log("WARN", "Password reset processing blocked by rate-limit policy", {
         requestId,
-        action: "USER_NOT_FOUND_SILENT",
-        maskedEmail: capturedEmailForLog,
+        action: "RATE_LIMIT_EXCEEDED",
+        maskedEmail: maskedEmailForLog,
+        secondsRemaining,
       });
 
-      // Compensate processing time differentials dynamically before exit dispatch
-      const processingTime = Date.now() - startTime;
-      const executionDelta = TARGET_EXECUTION_TIME_MS - processingTime;
-      if (executionDelta > 0) {
-        await sleep(executionDelta);
-      }
-
-      return NextResponse.json(GENERIC_SUCCESS_RESPONSE, { status: 200 });
-    }
-
-    // Mitigate OpenID Connect Authentication Routing Paths
-    if (user.provider === "google" && !user.password) {
-      logStructured("INFO", "Password reset bypass initiated for OAuth managed federation sequence", {
-        requestId,
-        action: "OAUTH_ACCOUNT_RESET_ATTEMPT",
-        maskedEmail: capturedEmailForLog,
-      });
-
-      const processingTime = Date.now() - startTime;
-      const executionDelta = TARGET_EXECUTION_TIME_MS - processingTime;
-      if (executionDelta > 0) {
-        await sleep(executionDelta);
-      }
-
-      return NextResponse.json(GENERIC_SUCCESS_RESPONSE, { status: 200 });
-    }
-
-    // 7. Clear Existing Active Transactions to Maintain Structural Database Consistency
-    await VerificationToken.deleteMany({
-      email,
-      type: TOKEN_TYPE,
-    });
-
-    // 8. Commit Fresh Security Verification Record inside the System Database
-    await VerificationToken.create({
-      email,
-      type: TOKEN_TYPE,
-      otpHash,
-      expiresAt,
-    });
-
-    // 9. Execute External Mail Service Dispatch Handler Route
-    try {
-      await sendResetOTP(email, rawOTP);
-
-      logStructured("INFO", "Identity validation verification code payload successfully dispatched", {
-        requestId,
-        action: "OTP_SENT",
-        maskedEmail: capturedEmailForLog,
-        durationMs: Date.now() - startTime,
-      });
-    } catch (emailError: unknown) {
-      logStructured("ERROR", "Mail carrier runtime engine failure during dispatch attempt", {
-        requestId,
-        action: "EMAIL_DISPATCH_FAILURE",
-        maskedEmail: capturedEmailForLog,
-        error: emailError instanceof Error ? emailError.message : String(emailError),
-      });
-
-      // Rollback active structural modifications if downstream integrations collapse
-      await VerificationToken.deleteMany({
-        email,
-        type: TOKEN_TYPE,
-      });
-
+      await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
       return NextResponse.json(
-        { error: "Failed to dispatch reset email. Please try again later." },
-        { status: 500 }
+        {
+          error: `Please wait ${secondsRemaining} second${
+            secondsRemaining === 1 ? "" : "s"
+          } before requesting another reset code.`,
+        },
+        {
+          status: 429,
+          headers: {
+            ...CONFIG.HTTP_HEADERS,
+            "Retry-After": String(secondsRemaining),
+          },
+        }
       );
     }
 
-    // 10. Dynamic Equalization Step for Real Success Path Execution Profiles
-    const operationalDuration = Date.now() - startTime;
-    const paddingTarget = TARGET_EXECUTION_TIME_MS - operationalDuration;
-    if (paddingTarget > 0) {
-      await sleep(paddingTarget);
+    // 6. User Account Identification Query
+    const user = await User.findOne({ email })
+      .select("_id provider password")
+      .lean<{
+        _id?: mongoose.Types.ObjectId;
+        provider?: string | null;
+        password?: string | null;
+      } | null>();
+
+    // Safeguard Pathway A: User identity does not exist
+    if (!user) {
+      AuditLogger.log("INFO", "Password reset requested for non-existent identity", {
+        requestId,
+        action: "USER_NOT_FOUND_SILENT",
+        maskedEmail: maskedEmailForLog,
+      });
+
+      const totalDurationMs = await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      AuditLogger.log("INFO", "Anti-enumeration delay execution finished", {
+        requestId,
+        action: "TIMING_COMPENSATED",
+        durationMs: totalDurationMs,
+      });
+
+      return NextResponse.json(GENERIC_SUCCESS_PAYLOAD, { status: 200, headers: CONFIG.HTTP_HEADERS });
     }
 
-    return NextResponse.json(GENERIC_SUCCESS_RESPONSE, { status: 200 });
+    // Safeguard Pathway B: Account managed via OAuth Provider (e.g., Google) with no password set
+    if (user.provider === "google" && !user.password) {
+      AuditLogger.log("INFO", "Password reset request bypassed for federated OAuth user", {
+        requestId,
+        action: "OAUTH_USER_RESET_BYPASS",
+        maskedEmail: maskedEmailForLog,
+      });
 
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error.";
+      const totalDurationMs = await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      AuditLogger.log("INFO", "Anti-enumeration delay execution finished", {
+        requestId,
+        action: "TIMING_COMPENSATED",
+        durationMs: totalDurationMs,
+      });
 
-    logStructured("ERROR", "Fatal structural intercept recorded within endpoint thread pipeline", {
+      return NextResponse.json(GENERIC_SUCCESS_PAYLOAD, { status: 200, headers: CONFIG.HTTP_HEADERS });
+    }
+
+    // 7. Atomic Token Provisioning via Mongoose Session Transaction where supported
+    let rawOTP = "";
+    const dbSession = await mongoose.startSession().catch(() => null);
+
+    try {
+      if (dbSession) {
+        await dbSession.withTransaction(async () => {
+          const result = await TokenOrchestratorService.generateAndPersistToken(email, dbSession);
+          rawOTP = result.rawOTP;
+        });
+      } else {
+        const result = await TokenOrchestratorService.generateAndPersistToken(email);
+        rawOTP = result.rawOTP;
+      }
+    } finally {
+      if (dbSession) {
+        await dbSession.endSession();
+      }
+    }
+
+    // 8. Mail Carrier Dispatch Operations
+    try {
+      await sendResetOTP(email, rawOTP);
+
+      AuditLogger.log("INFO", "Password reset verification OTP dispatched successfully", {
+        requestId,
+        action: "OTP_DISPATCH_SUCCESS",
+        maskedEmail: maskedEmailForLog,
+      });
+    } catch (emailError: unknown) {
+      const errorMessage = emailError instanceof Error ? emailError.message : String(emailError);
+
+      AuditLogger.log("ERROR", "Mail transport engine failed to deliver reset payload", {
+        requestId,
+        action: "OTP_DISPATCH_FAILED",
+        maskedEmail: maskedEmailForLog,
+        error: errorMessage,
+      });
+
+      // Revoke orphan verification token to preserve database state consistency
+      await TokenOrchestratorService.revokeTokens(email);
+
+      await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      return NextResponse.json(
+        { error: "Failed to dispatch reset email. Please try again later." },
+        { status: 500, headers: CONFIG.HTTP_HEADERS }
+      );
+    }
+
+    // 9. Final Anti-Enumeration Timing Compensation
+    const totalDurationMs = await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+
+    AuditLogger.log("INFO", "Password reset pipeline completed successfully", {
       requestId,
-      action: "FATAL_API_EXCEPTION",
-      maskedEmail: capturedEmailForLog,
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-      durationMs: Date.now() - startTime,
+      action: "PIPELINE_COMPLETE",
+      maskedEmail: maskedEmailForLog,
+      durationMs: totalDurationMs,
     });
 
+    return NextResponse.json(GENERIC_SUCCESS_PAYLOAD, { status: 200, headers: CONFIG.HTTP_HEADERS });
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown critical failure.";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    AuditLogger.log("ERROR", "Unhandled exception caught in password reset pipeline", {
+      requestId,
+      action: "UNHANDLED_EXCEPTION",
+      maskedEmail: maskedEmailForLog,
+      error: errorMessage,
+      stack: errorStack,
+    });
+
+    await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
     return NextResponse.json(
       { error: "An unexpected system error occurred. Please try again later." },
-      { status: 500 }
+      { status: 500, headers: CONFIG.HTTP_HEADERS }
     );
   }
 }

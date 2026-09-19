@@ -1,7 +1,7 @@
 /**
  * @file app/api/auth/[...nextauth]/route.ts
  * @module AuthRouteHandler
- * @description Enterprise-grade NextAuth Route Handler for Next.js 15 App Router.
+ * @description Enterprise-Grade NextAuth Route Handler for Next.js 15 App Router.
  * Implements async params resolution, safe param fallbacks, zero-leak telemetry logging,
  * strict security header enforcement, and robust fail-safe error boundaries.
  * 
@@ -9,7 +9,7 @@
  */
 
 import NextAuth from "next-auth";
-import { authOptions } from "./options";
+import { authOptions } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // ============================================================================
@@ -201,8 +201,11 @@ async function handleAuthPipeline(
       params: resolvedParams,
     });
 
+    // Create a mutable copy of response to guarantee header modifications succeed safely
+    const modifiedResponse = new Response(response.body, response);
+
     // 3. Ensure essential security and anti-caching headers exist on successful responses
-    applySecurityHeaders(response.headers);
+    applySecurityHeaders(modifiedResponse.headers);
 
     // 4. Record telemetry duration
     const durationMs = Number((performance.now() - startTime).toFixed(2));
@@ -211,12 +214,12 @@ async function handleAuthPipeline(
       level: "INFO",
       method: req.method,
       endpoint,
-      status: response.status,
+      status: modifiedResponse.status,
       durationMs,
       requestId,
     });
 
-    return response;
+    return modifiedResponse;
   } catch (error: unknown) {
     const durationMs = Number((performance.now() - startTime).toFixed(2));
     const err = error as Error;
