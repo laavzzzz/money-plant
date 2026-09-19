@@ -3,6 +3,7 @@ const nextConfig = {
   transpilePackages: ["lucide-react"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    webpackBuildWorker: false,
   },
   images: {
     remotePatterns: [
