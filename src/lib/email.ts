@@ -1,10 +1,17 @@
 import { Resend } from "resend";
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error("Please define RESEND_API_KEY inside your environment variables.");
+// Helper function to safely retrieve the Resend client at runtime
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("⚠️ [Resend Warning]: RESEND_API_KEY is not defined in environment variables.");
+    return null;
+  }
+  return new Resend(apiKey);
 }
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy reference for export
+export const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Fallback to Resend onboarding email ONLY for strict local development sandbox usage.
 const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
@@ -14,18 +21,23 @@ const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
  */
 async function sendSecureEmail(payload: { from: string; to: string; subject: string; html: string }) {
   try {
-    const { data, error } = await resend.emails.send(payload);
+    const resendClient = getResendClient();
+    if (!resendClient) {
+      throw new Error("RESEND_API_KEY is missing from environment variables.");
+    }
+
+    const { data, error } = await resendClient.emails.send(payload);
 
     if (error) {
       console.error("❌ [Resend API Error]:", error);
-      
+
       // Provide actionable feedback for the common testing domain constraint
       if (payload.from === "onboarding@resend.dev") {
         console.warn(
-          "⚠️  DEVELOPER NOTE: 'onboarding@resend.dev' can ONLY send emails to the primary email account used to register your Resend developer dashboard. Testing with secondary accounts will fail."
+          "⚠️ DEVELOPER NOTE: 'onboarding@resend.dev' can ONLY send emails to the primary email account used to register your Resend developer dashboard. Testing with secondary accounts will fail."
         );
       }
-      
+
       throw new Error(`Email dispatch failed: ${error.message} (${error.name})`);
     }
 

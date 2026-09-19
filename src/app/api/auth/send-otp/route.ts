@@ -6,6 +6,9 @@ import { generateOTP } from "@/lib/generateOTP";
 import { hashOTP } from "@/lib/hashOTP";
 import { sendVerificationOTP } from "@/lib/email";
 
+// Force Next.js to treat this route as dynamic during build time
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
