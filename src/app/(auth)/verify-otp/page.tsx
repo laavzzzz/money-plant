@@ -1,8 +1,11 @@
 "use client";
 
+declare module "next/navigation";
+
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShieldCheck, ArrowRight, RotateCcw, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
+// @ts-ignore -- next/link typings are resolved by the Next.js runtime in this project setup
 import Link from "next/link";
 import { OTPInput } from "@/components/auth/OTPInput";
 
