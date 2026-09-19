@@ -73,7 +73,12 @@ export async function sendVerificationOTP(email: string, otp: string) {
 /**
  * Sends a 6-digit password reset OTP code.
  */
-export async function sendResetOTP(email: string, otp: string) {
+export async function sendResetOTP(email: string, otp: string, resetLink?: string) {
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const linkBlock = resetLink
+    ? `<p style="margin: 20px 0;"><a href="${resetLink}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Reset password via secure link</a></p>`
+    : `<p style="margin: 20px 0;"><a href="${baseUrl}/forgot-password" style="color:#16a34a;">Open password reset page</a></p>`;
+
   return await sendSecureEmail({
     from: FROM_EMAIL,
     to: email,
@@ -85,6 +90,7 @@ export async function sendResetOTP(email: string, otp: string) {
         <div style="background-color: #fef2f2; border: 1px dashed #ef4444; padding: 20px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #b91c1c; margin: 24px 0;">
           ${otp}
         </div>
+        ${linkBlock}
         <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">This code expires in 10 minutes. If you did not request a reset, please secure your account immediately.</p>
       </div>
     `,

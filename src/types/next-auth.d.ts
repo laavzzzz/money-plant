@@ -45,6 +45,7 @@ export interface MoneyPlantUserEntity extends DefaultUser {
   provider?: AuthProviderType;
   onboardingCompleted?: boolean;
   onboardingStep?: string | null;
+  rememberMe?: boolean;
 }
 
 // ============================================================================
@@ -105,6 +106,8 @@ declare module "next-auth/jwt" {
     accessTokenExpires?: number;
     /** Operational error code associated with token refreshing */
     error?: string;
+    /** Per-login session lifetime in seconds (remember-me) */
+    sessionMaxAge?: number;
   }
 }
 

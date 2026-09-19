@@ -156,11 +156,13 @@ async function sendPasswordResetEmail(email: string): Promise<void> {
       // Fallback for non-JSON response
     }
 
-    throw new AuthApiError(
-      errorData.message || "Unable to process request. Please try again later.",
-      response.status,
-      errorData.code
-    );
+    const message =
+      (typeof errorData.message === "string" && errorData.message) ||
+      (typeof (errorData as { error?: string }).error === "string"
+        ? (errorData as { error: string }).error
+        : "") ||
+      "Unable to process request. Please try again later.";
+    throw new AuthApiError(message, response.status, errorData.code);
   }
 }
 
@@ -189,11 +191,13 @@ async function verifyOtpAndResetPassword(
       // Fallback for non-JSON response
     }
 
-    throw new AuthApiError(
-      errorData.message || "Invalid or expired OTP code. Please try again.",
-      response.status,
-      errorData.code
-    );
+    const message =
+      (typeof errorData.message === "string" && errorData.message) ||
+      (typeof (errorData as { error?: string }).error === "string"
+        ? (errorData as { error: string }).error
+        : "") ||
+      "Invalid or expired OTP code. Please try again.";
+    throw new AuthApiError(message, response.status, errorData.code);
   }
 }
 

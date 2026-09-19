@@ -35,8 +35,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession, SignInResponse } from "next-auth/react";
+import { Eye, EyeOff } from "lucide-react";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
+import { getErrorMessage } from "@/lib/api-response";
+import { passwordSchema } from "@/lib/validators/auth";
 
 // ============================================================================
 // DOMAIN CONFIGURATION & CONSTANTS
@@ -48,6 +52,7 @@ const OTP_LENGTH = 6;
 const DEFAULT_REDIRECT_URL = "/dashboard";
 const REGISTER_API_ENDPOINT = "/api/auth/register";
 const VERIFY_OTP_ENDPOINT = "/api/auth/verify-otp";
+const RESEND_OTP_ENDPOINT = "/api/auth/resend-otp";
 const FORGOT_PASSWORD_ENDPOINT = "/api/auth/forgot-password";
 
 // ============================================================================
@@ -68,6 +73,9 @@ export interface AuthState {
   readonly mode: AuthMode;
   readonly step: AuthStep;
   readonly fields: SystemFormFields;
+  readonly confirmPassword: string;
+  readonly rememberMe: boolean;
+  readonly showPassword: boolean;
   readonly isGoogleLoading: boolean;
   readonly isSubmitting: boolean;
   readonly isForgotPasswordOpen: boolean;
@@ -79,6 +87,9 @@ export interface AuthState {
 
 export type AuthAction =
   | { type: "SET_FIELD"; payload: { field: keyof Omit<SystemFormFields, "otp">; value: string } }
+  | { type: "SET_CONFIRM_PASSWORD"; payload: string }
+  | { type: "SET_REMEMBER_ME"; payload: boolean }
+  | { type: "TOGGLE_SHOW_PASSWORD" }
   | { type: "SET_OTP_INDEX"; payload: { index: number; value: string } }
   | { type: "TOGGLE_MODE" }
   | { type: "SET_STEP"; payload: AuthStep }
@@ -106,6 +117,9 @@ const INITIAL_STATE: AuthState = {
   mode: "login",
   step: "credentials",
   fields: INITIAL_FIELDS,
+  confirmPassword: "",
+  rememberMe: false,
+  showPassword: false,
   isGoogleLoading: false,
   isSubmitting: false,
   isForgotPasswordOpen: false,
@@ -126,6 +140,12 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         },
         error: null,
       };
+    case "SET_CONFIRM_PASSWORD":
+      return { ...state, confirmPassword: action.payload, error: null };
+    case "SET_REMEMBER_ME":
+      return { ...state, rememberMe: action.payload };
+    case "TOGGLE_SHOW_PASSWORD":
+      return { ...state, showPassword: !state.showPassword };
     case "SET_OTP_INDEX": {
       const newOtp = [...state.fields.otp];
       newOtp[action.payload.index] = action.payload.value;
@@ -206,11 +226,23 @@ class AuthValidator {
       return { isValid: false, error: "Please enter a valid email address." };
     }
 
-    if (!fields.password || fields.password.length < MIN_PASSWORD_LENGTH) {
+    if (mode === "login") {
+      if (!fields.password) {
+        return { isValid: false, error: "Password is required." };
+      }
+      return { isValid: true, error: null };
+    }
+
+    const passwordCheck = passwordSchema.safeParse(fields.password);
+    if (!passwordCheck.success) {
       return {
         isValid: false,
-        error: `Password must contain at least ${MIN_PASSWORD_LENGTH} characters.`,
+        error: passwordCheck.error.issues[0]?.message || "Password does not meet requirements.",
       };
+    }
+
+    if (state.confirmPassword !== fields.password) {
+      return { isValid: false, error: "Passwords do not match." };
     }
 
     return { isValid: true, error: null };
@@ -239,7 +271,7 @@ async function executeRegistration(payload: { name: string; email: string; passw
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Account registration failed.");
+    throw new Error(getErrorMessage(data, "Account registration failed."));
   }
 }
 

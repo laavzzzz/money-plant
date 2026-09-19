@@ -126,6 +126,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       style={{ colorScheme: "light" }}
     >
       <body
+        suppressHydrationWarning
         className={cn(
           "min-h-[100dvh] w-full font-sans antialiased",
           "selection:bg-yellow-200 selection:text-slate-900",

@@ -97,6 +97,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember Me", type: "text" },
       },
 
       async authorize(credentials, req) {
@@ -151,6 +152,9 @@ export const authOptions: NextAuthOptions = {
             : null;
 
         // 7. Return standard user authorization payload
+        const rememberMe =
+          credentials.rememberMe === "true" || credentials.rememberMe === "on";
+
         return {
           id: userIdStr,
           name: user.name || "MoneyPlant User",
@@ -160,6 +164,7 @@ export const authOptions: NextAuthOptions = {
           isVerified: user.isVerified ?? true,
           onboardingCompleted: user.onboardingCompleted ?? false,
           onboardingStep,
+          rememberMe,
         };
       },
     }),
@@ -179,7 +184,12 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 Days session duration
+    maxAge: 30 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
+  },
+
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   secret: NEXTAUTH_SECRET,
@@ -187,6 +197,45 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
     error: "/login",
+    newUser: "/dashboard",
+  },
+
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    callbackUrl: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.callback-url"
+          : "next-auth.callback-url",
+      options: {
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Host-next-auth.csrf-token"
+          : "next-auth.csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
 
   callbacks: {
@@ -280,6 +329,10 @@ export const authOptions: NextAuthOptions = {
         token.isVerified = user.isVerified ?? true;
         token.onboardingCompleted = user.onboardingCompleted ?? false;
         token.onboardingStep = user.onboardingStep || null;
+
+        const rememberMe = (user as { rememberMe?: boolean }).rememberMe === true;
+        const sessionMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
+        token.sessionMaxAge = sessionMaxAge;
       }
 
       // Handle dynamic client-side session updates via update()
@@ -297,7 +350,25 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
+      if (typeof token.sessionMaxAge === "number" && token.sessionMaxAge > 0) {
+        token.exp = Math.floor(Date.now() / 1000) + token.sessionMaxAge;
+      }
+
       return token;
+    },
+
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      try {
+        if (new URL(url).origin === baseUrl) {
+          return url;
+        }
+      } catch {
+        return `${baseUrl}/dashboard`;
+      }
+      return `${baseUrl}/dashboard`;
     },
 
     /**

@@ -11,6 +11,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import crypto from "crypto";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import User, { IUser } from "@/models/User";
@@ -198,31 +199,36 @@ class TokenOrchestratorService {
   public static async generateAndPersistToken(
     email: string,
     session?: mongoose.ClientSession
-  ): Promise<{ rawOTP: string; expiresAt: Date }> {
+  ): Promise<{ rawOTP: string; resetLinkToken: string; expiresAt: Date }> {
     const rawOTP = generateOTP();
     const otpHash = await hashOTP(rawOTP);
+    const resetLinkToken = crypto.randomUUID();
+    const resetLinkTokenHash = crypto
+      .createHash("sha256")
+      .update(resetLinkToken)
+      .digest("hex");
     const expiresAt = new Date(Date.now() + CONFIG.TOKEN_EXPIRATION_MINUTES * 60 * 1000);
 
-    // Invalidate existing tokens for this specific flow
     await VerificationToken.deleteMany(
       { email, type: CONFIG.TOKEN_TYPE },
       session ? { session } : {}
     );
 
-    // Create fresh security verification record
     await VerificationToken.create(
       [
         {
           email,
           type: CONFIG.TOKEN_TYPE,
           otpHash,
+          resetLinkTokenHash,
+          attempts: 0,
           expiresAt,
         },
       ],
       session ? { session } : {}
     );
 
-    return { rawOTP, expiresAt };
+    return { rawOTP, resetLinkToken, expiresAt };
   }
 
   /**
@@ -372,6 +378,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // 7. Atomic Token Provisioning via Mongoose Session Transaction where supported
     let rawOTP = "";
+    let resetLinkToken = "";
     const dbSession = await mongoose.startSession().catch(() => null);
 
     try {
@@ -379,10 +386,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         await dbSession.withTransaction(async () => {
           const result = await TokenOrchestratorService.generateAndPersistToken(email, dbSession);
           rawOTP = result.rawOTP;
+          resetLinkToken = result.resetLinkToken;
         });
       } else {
         const result = await TokenOrchestratorService.generateAndPersistToken(email);
         rawOTP = result.rawOTP;
+        resetLinkToken = result.resetLinkToken;
       }
     } finally {
       if (dbSession) {
@@ -390,9 +399,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
+    const baseUrl = process.env.NEXTAUTH_URL || req.nextUrl.origin;
+    const resetLink = `${baseUrl}/reset-password?token=${encodeURIComponent(resetLinkToken)}`;
+
     // 8. Mail Carrier Dispatch Operations
     try {
-      await sendResetOTP(email, rawOTP);
+      await sendResetOTP(email, rawOTP, resetLink);
 
       AuditLogger.log("INFO", "Password reset verification OTP dispatched successfully", {
         requestId,

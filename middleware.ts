@@ -80,7 +80,14 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
  */
 const ROUTE_RULES = {
   /** Routes accessible ONLY to unauthenticated users */
-  GUEST_ONLY: ["/login", "/register", "/forgot-password", "/reset-password"],
+  GUEST_ONLY: [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-otp",
+    "/verify-email",
+  ],
 
   /** Verification path for unverified authenticated users */
   VERIFICATION_PATH: PATHS.VERIFICATION_PATH,

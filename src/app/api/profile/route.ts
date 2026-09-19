@@ -5,19 +5,7 @@ import { tryMongoConnect } from "@/lib/data/mongo";
 import { User, IUser } from "@/models/User";
 import { getLocalProfile, saveLocalProfile } from "@/lib/data/profile-store";
 
-// Try importing authOptions dynamically, or fall back to route auth configuration
-let authOptions: any;
-try {
-  // Common paths for auth options in Next.js projects
-  authOptions = require("@/app/api/auth/[...nextauth]/route").authOptions;
-} catch {
-  try {
-    authOptions = require("@/lib/auth").authOptions;
-  } catch {
-    // Basic fallback configuration object if imported file doesn't export authOptions directly
-    authOptions = { secret: process.env.NEXTAUTH_SECRET };
-  }
-}
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

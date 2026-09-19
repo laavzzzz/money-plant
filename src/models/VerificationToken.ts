@@ -6,6 +6,8 @@ export interface IVerificationToken extends Document {
   email: string;
   type: TokenType;
   otpHash: string;
+  resetLinkTokenHash?: string | null;
+  attempts?: number;
   expiresAt: Date;
   createdAt: Date;
 }
@@ -27,6 +29,17 @@ const VerificationTokenSchema: Schema<IVerificationToken> = new Schema(
     otpHash: {
       type: String,
       required: [true, "OTP hash is required"],
+    },
+    resetLinkTokenHash: {
+      type: String,
+      default: null,
+      index: true,
+      sparse: true,
+    },
+    attempts: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     expiresAt: {
       type: Date,

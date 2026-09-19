@@ -11,10 +11,9 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import crypto from "crypto";
 import dbConnect from "@/lib/dbConnect";
 import VerificationToken from "@/models/VerificationToken";
-import { hashOTP } from "@/lib/hashOTP";
+import { verifyOTPHash } from "@/lib/hashOTP";
 
 // ============================================================================
 // CONFIGURATION & CONSTANTS
@@ -93,24 +92,6 @@ function logStructured(
     console.warn(JSON.stringify(payload));
   } else {
     console.info(JSON.stringify(payload));
-  }
-}
-
-/**
- * Compares two string hashes in constant time to eliminate timing side-channel attacks.
- */
-function safeTimingCompare(a: string, b: string): boolean {
-  try {
-    const bufA = Buffer.from(a, "utf-8");
-    const bufB = Buffer.from(b, "utf-8");
-
-    if (bufA.length !== bufB.length) {
-      return false;
-    }
-
-    return crypto.timingSafeEqual(bufA, bufB);
-  } catch {
-    return false;
   }
 }
 
@@ -213,9 +194,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // 7. Hash Computed Input & Perform Constant-Time Verification
-    const computedHash = await hashOTP(otp);
-    const isValidMatch = safeTimingCompare(computedHash, tokenRecord.otpHash);
+    const isValidMatch = await verifyOTPHash(otp, tokenRecord.otpHash);
 
     if (!isValidMatch) {
       const updatedAttempts = attempts + 1;
