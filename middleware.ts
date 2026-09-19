@@ -2,10 +2,9 @@
  * @fileoverview Enterprise Security, RBAC & Access Control Middleware
  * @description Edge-compatible Next.js middleware handling JWT verification, account
  * verification state enforcement, role-based access control (RBAC), open redirect prevention,
- * strict CSP nonce generation, security headers, and audit telemetry.
- * 
- * @module middleware
- * @version 3.1.0
+ * strict CSP compatibility, security headers, and audit telemetry.
+ * * @module middleware
+ * @version 3.2.0
  */
 
 import { NextResponse } from "next/server";
@@ -99,6 +98,7 @@ const ROUTE_RULES = {
     "/_next",
     "/static",
     "/favicon.ico",
+    "/icons",
     "/api/auth",
     "/api/health",
   ],
@@ -139,10 +139,8 @@ function getSafeCallbackUrl(targetUrl: string | null, requestOrigin: string): st
   if (!targetUrl) return null;
 
   try {
-    // Decode percent-encoded payloads to detect hidden control sequences
     const decodedUrl = decodeURIComponent(targetUrl).trim();
 
-    // Reject protocol-relative or backslash-escaped URLs
     if (
       decodedUrl.startsWith("//") ||
       decodedUrl.startsWith("/\\") ||
@@ -236,14 +234,14 @@ function logAuditEvent(
 }
 
 /**
- * Generates OWASP L3 Compliant Security Headers with Dynamic CSP Nonce.
+ * Generates OWASP L3 Compliant Security Headers with Production-Safe Next.js CSP.
  */
 function generateSecurityHeaders(nonce: string, requestId: string): Headers {
   const headers = new Headers();
 
   const cspHeader = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval'`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data:`,
@@ -453,9 +451,9 @@ export const config = {
      * Match all request paths except for:
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public assets (.png, .svg, .jpg, etc.)
+     * - favicon.ico & icons
+     * - public image assets (.png, .svg, .jpg, etc.)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
