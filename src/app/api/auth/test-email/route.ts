@@ -10,13 +10,17 @@ export async function GET() {
       return NextResponse.json({ error: "RESEND_API_KEY is not set in your environment variables!" }, { status: 500 });
     }
 
+    if (!resend) {
+      return NextResponse.json({ success: false, error: "Resend email client is not configured." }, { status: 500 });
+    }
+
     console.log("Attempting direct test mail dispatch...");
 
     // DIRECT DISPATCH BYPASSING DATABASE VALIDATIONS
     // IMPORTANT: Swap the 'to' field with the exact email address you used to register your Resend account!
     const { data, error } = await resend.emails.send({
       from: "onboarding@resend.dev",
-      to: "laveezazafar1910@gmail.com", 
+      to: "laveezazafar1910@gmail.com",
       subject: "MoneyPlant Direct Carrier Test 🛠️",
       html: "<p>If you see this, your Resend API configurations are 100% correct!</p>",
     });
