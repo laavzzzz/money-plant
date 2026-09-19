@@ -2,10 +2,10 @@
  * @file app/api/auth/[...nextauth]/route.ts
  * @module AuthRouteHandler
  * @description Enterprise-grade NextAuth Route Handler for Next.js 15 App Router.
- * Implements async params resolution, zero-leak telemetry logging, strict security header enforcement,
- * and robust fail-safe error boundaries.
+ * Implements async params resolution, safe param fallbacks, zero-leak telemetry logging,
+ * strict security header enforcement, and robust fail-safe error boundaries.
  * 
- * @version 3.1.0
+ * @version 3.2.0
  */
 
 import NextAuth from "next-auth";
@@ -104,6 +104,27 @@ function extractSanitizedEndpoint(url: string): NextAuthAction {
 }
 
 /**
+ * Parses path segments directly from URL as a fallback for NextAuth route matching.
+ * 
+ * @param url - Incoming request URL.
+ * @returns Array of path segments matching [...nextauth] pattern.
+ */
+function extractFallbackParams(url: string): { nextauth: string[] } {
+  try {
+    const parsedUrl = new URL(url);
+    const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
+    const authIdx = pathSegments.indexOf("auth");
+
+    if (authIdx !== -1 && authIdx + 1 < pathSegments.length) {
+      return { nextauth: pathSegments.slice(authIdx + 1) };
+    }
+  } catch {
+    // Ignore URL parsing errors and return default
+  }
+  return { nextauth: [] };
+}
+
+/**
  * Structured audit logging function for authentication telemetry.
  */
 function logAuthTelemetry(payload: AuthTelemetryPayload): void {
@@ -167,8 +188,13 @@ async function handleAuthPipeline(
   });
 
   try {
-    // 1. Next.js 15 Compliance: Explicitly await asynchronous route parameters
-    const resolvedParams = await context.params;
+    // 1. Next.js 15 Compliance: Safely resolve dynamic route parameters with fallback
+    let resolvedParams: { nextauth?: string[] };
+    try {
+      resolvedParams = context?.params ? await context.params : extractFallbackParams(req.url);
+    } catch {
+      resolvedParams = extractFallbackParams(req.url);
+    }
 
     // 2. Delegate to NextAuth native handler passing resolved route parameters
     const response = await nextAuthHandler(req, {
