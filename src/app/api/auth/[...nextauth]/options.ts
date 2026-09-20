@@ -5,7 +5,7 @@
  * Manages Credentials and Google OAuth authentication providers, MongoDB database synchronization,
  * JWT token payload enrichment (including onboarding flags), and secure session hydration.
  *
- * @version 3.1.0
+ * @version 3.2.0
  */
 
 import { NextAuthOptions } from "next-auth";
@@ -15,6 +15,34 @@ import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/dbConnect";
 import { User as UserModel, IUser } from "@/models/User";
 import { AuthProviderType } from "@/types/next-auth";
+
+// ============================================================================
+// MODULE TYPE AUGMENTATION
+// ============================================================================
+
+declare module "next-auth" {
+  interface User {
+    id: string;
+    provider: AuthProviderType;
+    role?: string;
+    isVerified: boolean;
+    onboardingCompleted: boolean;
+    onboardingStep?: string | null;
+    rememberMe?: boolean;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    provider: AuthProviderType;
+    role?: string;
+    isVerified: boolean;
+    onboardingCompleted: boolean;
+    onboardingStep?: string | null;
+    sessionMaxAge?: number;
+  }
+}
 
 type IUserWithId = IUser & { _id: unknown; role?: string };
 
@@ -100,7 +128,7 @@ export const authOptions: NextAuthOptions = {
         rememberMe: { label: "Remember Me", type: "text" },
       },
 
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing email or password.");
         }
@@ -161,7 +189,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           image: user.image || null,
           provider: (user.provider as AuthProviderType) || "credentials",
-          role: (user as any).role || "USER",
+          role: user.role || "USER",
           isVerified: user.isVerified ?? true,
           onboardingCompleted: user.onboardingCompleted ?? false,
           onboardingStep,
@@ -300,7 +328,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           user.provider = "google";
-          user.role = (existingUser || {}).role || "USER";
+          user.role = existingUser?.role || "USER";
           user.isVerified = true;
 
           logAuthEvent("INFO", "Google OAuth synchronization completed successfully.", {
@@ -334,7 +362,7 @@ export const authOptions: NextAuthOptions = {
         token.onboardingCompleted = user.onboardingCompleted ?? false;
         token.onboardingStep = user.onboardingStep || null;
 
-        const rememberMe = (user as { rememberMe?: boolean }).rememberMe === true;
+        const rememberMe = user.rememberMe === true;
         const sessionMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
         token.sessionMaxAge = sessionMaxAge;
       }

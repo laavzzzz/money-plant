@@ -1,15 +1,15 @@
 /**
- * @file app/api/auth/[...nextauth]/route.ts
+ * @file src/app/api/auth/[...nextauth]/route.ts
  * @module AuthRouteHandler
  * @description Enterprise-Grade NextAuth Route Handler for Next.js 15 App Router.
  * Implements async params resolution, safe param fallbacks, zero-leak telemetry logging,
  * strict security header enforcement, and robust fail-safe error boundaries.
  * 
- * @version 3.2.0
+ * @version 3.3.0
  */
 
 import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { NextRequest, NextResponse } from "next/server";
 
 // ============================================================================

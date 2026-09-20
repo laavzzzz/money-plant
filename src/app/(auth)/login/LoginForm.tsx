@@ -1,11 +1,11 @@
 /**
- * @fileoverview Enterprise Corporate Authentication Portal Module
- * @description Production-grade Next.js client authentication interface featuring NextAuth federated OAuth,
+ * @fileoverview Enterprise Authentication Form Module
+ * @description Production-grade Next.js client form component handling NextAuth federated OAuth,
  * secure Email + Password credentials dispatch, multi-step OTP Verification flow, Forgot Password modal,
- * full WCAG 2.1 AA compliance, and optimized Framer Motion visual transitions.
+ * full WCAG 2.1 AA compliance, and Framer Motion visual transitions.
  * 
- * @module Auth/LoginPage
- * @version 4.1.0
+ * @module Auth/LoginForm
+ * @version 4.2.0
  */
 
 "use client";
@@ -17,7 +17,6 @@ import React, {
   memo,
   useMemo,
   useEffect,
-  Suspense,
   ChangeEvent,
   FormEvent,
 } from "react";
@@ -552,10 +551,10 @@ const FormAlert = memo(({ id, error, success }: FormAlertProps) => (
 FormAlert.displayName = "FormAlert";
 
 // ============================================================================
-// INTERNAL FORM CONTROLLER (USES SEARCH PARAMS SAFELY)
+// MAIN LOGIN FORM COMPONENT (SUSPENSE-READY)
 // ============================================================================
 
-function LoginFormInner() {
+export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status } = useSession();
@@ -1072,29 +1071,5 @@ function LoginFormInner() {
         </span>
       </footer>
     </main>
-  );
-}
-
-// ============================================================================
-// EXPORT WRAPPED IN SUSPENSE FOR NEXT.JS PRERENDERING COMPATIBILITY
-// ============================================================================
-
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <main
-          className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col items-center justify-center p-6"
-          aria-busy="true"
-        >
-          <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
-          <p className="mt-4 text-xs font-black uppercase tracking-[0.3em] text-[var(--text-light)]">
-            Initializing Portal...
-          </p>
-        </main>
-      }
-    >
-      <LoginFormInner />
-    </Suspense>
   );
 }

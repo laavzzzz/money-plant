@@ -1,10 +1,11 @@
 /**
- * @fileoverview Enterprise Security, RBAC & Access Control Middleware
- * @description Edge-compatible Next.js middleware handling JWT verification, account
- * verification state enforcement, role-based access control (RBAC), open redirect prevention,
- * strict CSP compatibility, security headers, and audit telemetry.
+ * @file src/middleware.ts
+ * @description Enterprise Security, RBAC & Access Control Middleware
+ * Edge-compatible Next.js middleware handling JWT verification, account verification state
+ * enforcement, role-based access control (RBAC), open redirect prevention, strict CSP compatibility,
+ * OWASP security headers, and structured audit telemetry.
  * * @module middleware
- * @version 3.3.0
+ * @version 3.4.0
  */
 
 import { NextResponse } from "next/server";
@@ -12,7 +13,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // ============================================================================
-// TYPE DEFINITIONS & INTERFACES
+// TYPE DEFINITIONS & DOMAIN INTERFACES
 // ============================================================================
 
 export type UserRole = "USER" | "SUPPORT" | "ADMIN" | "SUPERADMIN";
@@ -22,7 +23,7 @@ export interface ExtendedJWT {
   email?: string;
   role?: UserRole;
   isVerified?: boolean;
-  provider?: string;
+  provider?: "credentials" | "google" | string;
   [key: string]: unknown;
 }
 
@@ -49,10 +50,7 @@ export interface AuditLogMeta {
 // CONFIGURATION & CONSTANTS
 // ============================================================================
 
-/**
- * Fallback secret resolution prioritizing modern NextAuth v5 (AUTH_SECRET)
- * and v4 (NEXTAUTH_SECRET) standards.
- */
+/** Fallback secret resolution prioritizing modern v5 (AUTH_SECRET) and v4 (NEXTAUTH_SECRET) standards. */
 const AUTH_SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
 
 /** Standard application path targets */
@@ -65,57 +63,49 @@ const PATHS = {
 } as const;
 
 /**
- * RBAC Role Hierarchy Definition
- * Higher index implies inheritance of lower role capabilities.
+ * Role hierarchy levels for permission inheritance.
+ * Higher integer values inherit lower level rights.
  */
-const ROLE_HIERARCHY: Record<UserRole, number> = {
+const ROLE_HIERARCHY: Readonly<Record<UserRole, number>> = Object.freeze({
   USER: 1,
   SUPPORT: 2,
   ADMIN: 3,
   SUPERADMIN: 4,
-} as const;
+});
 
-/**
- * Route Classification Rules & Access Constraints
- */
-const ROUTE_RULES = {
-  /** Routes accessible ONLY to unauthenticated users */
-  GUEST_ONLY: [
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/reset-password",
-  ],
+/** Static asset and public bypass prefix targets */
+const PUBLIC_BYPASS_SET = new Set([
+  "/_next",
+  "/static",
+  "/favicon.ico",
+  "/icons",
+  "/api/auth",
+  "/api/health",
+]);
 
-  /** Verification path for unverified authenticated users */
-  VERIFICATION_PATH: PATHS.VERIFICATION_PATH,
+/** Public guest-only route list */
+const GUEST_ONLY_ROUTES: readonly string[] = Object.freeze([
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+]);
 
-  /** Protected routes with explicit Role-Based Access Control (RBAC) constraints */
-  PROTECTED_RULES: [
-    { path: "/admin", roles: ["ADMIN", "SUPERADMIN"], requireVerification: true },
-    { path: "/dashboard", requireVerification: true },
-    { path: "/profile", requireVerification: true },
-    { path: "/settings", requireVerification: true },
-    { path: "/analytics", requireVerification: true },
-    { path: "/garden", requireVerification: true },
-    { path: "/goals", requireVerification: true },
-    { path: "/history", requireVerification: true },
-    { path: "/leaderboard", requireVerification: true },
-    { path: "/transactions", requireVerification: true },
-    { path: "/wishlist", requireVerification: true },
-    { path: "/api/protected", requireVerification: true },
-  ] as const satisfies readonly RouteRule[],
-
-  /** Static asset and public system bypass paths */
-  PUBLIC_BYPASS_PREFIXES: [
-    "/_next",
-    "/static",
-    "/favicon.ico",
-    "/icons",
-    "/api/auth",
-    "/api/health",
-  ],
-} as const;
+/** Protected route mapping rule registry */
+const PROTECTED_RULES: readonly RouteRule[] = Object.freeze([
+  { path: "/admin", roles: ["ADMIN", "SUPERADMIN"], requireVerification: true },
+  { path: "/dashboard", requireVerification: true },
+  { path: "/profile", requireVerification: true },
+  { path: "/settings", requireVerification: true },
+  { path: "/analytics", requireVerification: true },
+  { path: "/garden", requireVerification: true },
+  { path: "/goals", requireVerification: true },
+  { path: "/history", requireVerification: true },
+  { path: "/leaderboard", requireVerification: true },
+  { path: "/transactions", requireVerification: true },
+  { path: "/wishlist", requireVerification: true },
+  { path: "/api/protected", requireVerification: true },
+]);
 
 // ============================================================================
 // SECURITY & CRYPTO UTILITIES
@@ -146,7 +136,6 @@ function normalizePathname(pathname: string): string {
 
 /**
  * Sanitizes and validates callback URLs to strictly prevent Open Redirect vulnerabilities.
- * Disallows protocol-relative URLs, control characters, and off-origin redirects.
  */
 function getSafeCallbackUrl(targetUrl: string | null, requestOrigin: string): string | null {
   if (!targetUrl) return null;
@@ -154,6 +143,7 @@ function getSafeCallbackUrl(targetUrl: string | null, requestOrigin: string): st
   try {
     const decodedUrl = decodeURIComponent(targetUrl).trim();
 
+    // Reject protocol-relative or dangerous backslash bypass URLs
     if (
       decodedUrl.startsWith("//") ||
       decodedUrl.startsWith("/\\") ||
@@ -179,9 +169,20 @@ function getSafeCallbackUrl(targetUrl: string | null, requestOrigin: string): st
 }
 
 /**
- * Determines whether a given pathname matches any prefix in a target array.
+ * Fast-path prefix evaluation for system bypasses and guest routes.
  */
-function matchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
+function matchesPrefixSet(pathname: string, prefixes: ReadonlySet<string>): boolean {
+  const normalized = normalizePathname(pathname);
+  for (const prefix of prefixes) {
+    const normPrefix = normalizePathname(prefix);
+    if (normalized === normPrefix || normalized.startsWith(`${normPrefix}/`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function matchesPrefixArray(pathname: string, prefixes: readonly string[]): boolean {
   const normalized = normalizePathname(pathname);
   return prefixes.some((prefix) => {
     const normPrefix = normalizePathname(prefix);
@@ -190,22 +191,22 @@ function matchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
 }
 
 /**
- * Evaluates route-specific security rules against current normalized path.
+ * Evaluates route-specific security rules against the current normalized path.
  */
 function findMatchingRouteRule(pathname: string): RouteRule | undefined {
   const normalized = normalizePathname(pathname);
-  return ROUTE_RULES.PROTECTED_RULES.find((rule) => {
+  return PROTECTED_RULES.find((rule) => {
     const normRulePath = normalizePathname(rule.path);
     return normalized === normRulePath || normalized.startsWith(`${normRulePath}/`);
   });
 }
 
 /**
- * Verifies if a user's role satisfies any of the required route roles via hierarchy evaluation.
+ * Verifies if a user's role satisfies route role constraints using role hierarchy.
  */
 function isRoleAuthorized(userRole: UserRole, requiredRoles?: readonly UserRole[]): boolean {
   if (!requiredRoles || requiredRoles.length === 0) return true;
-  
+
   const userLevel = ROLE_HIERARCHY[userRole] ?? 0;
   return requiredRoles.some((reqRole) => {
     const requiredLevel = ROLE_HIERARCHY[reqRole] ?? Infinity;
@@ -247,7 +248,7 @@ function logAuditEvent(
 }
 
 /**
- * Generates OWASP L3 Compliant Security Headers with Production-Safe Next.js CSP.
+ * Generates OWASP Compliant Security Headers with dynamic CSP Nonce.
  */
 function generateSecurityHeaders(nonce: string, requestId: string): Headers {
   const headers = new Headers();
@@ -287,174 +288,189 @@ function generateSecurityHeaders(nonce: string, requestId: string): Headers {
 // ============================================================================
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
-  const { pathname, searchParams, origin } = req.nextUrl;
   const requestId = req.headers.get("x-request-id") || crypto.randomUUID();
   const nonce = generateNonce();
+  const { pathname, searchParams, origin } = req.nextUrl;
 
-  // 1. Bypass static assets and system routes
-  if (matchesPrefix(pathname, ROUTE_RULES.PUBLIC_BYPASS_PREFIXES)) {
-    return NextResponse.next();
-  }
+  try {
+    // 1. Fast-path bypass for static assets and public system endpoints
+    if (matchesPrefixSet(pathname, PUBLIC_BYPASS_SET)) {
+      return NextResponse.next();
+    }
 
-  // 2. Validate Auth Secret Availability
-  if (!AUTH_SECRET) {
-    logAuditEvent("ERROR", "Missing authentication secret in environment configuration", {
-      requestId,
-      pathname,
-    });
+    // 2. Secret Availability Guard
+    if (!AUTH_SECRET) {
+      logAuditEvent("ERROR", "Missing authentication secret in environment configuration", {
+        requestId,
+        pathname,
+      });
 
-    if (process.env.NODE_ENV === "production") {
-      return new NextResponse("Internal Security Error", {
-        status: 500,
-        headers: generateSecurityHeaders(nonce, requestId),
+      if (process.env.NODE_ENV === "production") {
+        return new NextResponse("Internal Security Error", {
+          status: 500,
+          headers: generateSecurityHeaders(nonce, requestId),
+        });
+      }
+    }
+
+    // 3. Resolve JWT Token from Request
+    let token: ExtendedJWT | null = null;
+    try {
+      token = (await getToken({
+        req,
+        secret: AUTH_SECRET,
+        secureCookie: process.env.NODE_ENV === "production",
+      })) as ExtendedJWT | null;
+    } catch (error) {
+      logAuditEvent("ERROR", "JWT Token resolution exception", {
+        requestId,
+        pathname,
+        error: error instanceof Error ? error.message : "Unknown token error",
       });
     }
-  }
 
-  // 3. Resolve JWT Token from Request
-  let token: ExtendedJWT | null = null;
-  try {
-    token = (await getToken({
-      req,
-      secret: AUTH_SECRET,
-      secureCookie: process.env.NODE_ENV === "production",
-    })) as ExtendedJWT | null;
-  } catch (error) {
-    logAuditEvent("ERROR", "JWT Token resolution exception", {
-      requestId,
-      pathname,
-      error: error instanceof Error ? error.message : "Unknown token error",
+    const isAuthenticated = Boolean(token);
+    const isGoogleAccount = token?.provider === "google";
+    
+    // Google OAuth sign-ins default to verified unless explicitly overridden
+    const isVerified = token?.isVerified !== undefined ? Boolean(token.isVerified) : isGoogleAccount;
+    const userRole: UserRole = token?.role || "USER";
+
+    const isGuestOnlyPath = matchesPrefixArray(pathname, GUEST_ONLY_ROUTES);
+    const isVerificationPath = normalizePathname(pathname) === normalizePathname(PATHS.VERIFICATION_PATH);
+    const matchedProtectedRule = findMatchingRouteRule(pathname);
+    const isProtectedPath = Boolean(matchedProtectedRule);
+
+    // Initialize downstream context headers
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-request-id", requestId);
+    requestHeaders.set("x-nonce", nonce);
+
+    if (isAuthenticated) {
+      requestHeaders.set("x-user-id", token?.sub || "");
+      requestHeaders.set("x-user-role", userRole);
+      requestHeaders.set("x-user-verified", String(isVerified));
+    }
+
+    /** Helper to construct response with full security headers */
+    const createRedirectResponse = (url: URL): NextResponse => {
+      const response = NextResponse.redirect(url);
+      const securityHeaders = generateSecurityHeaders(nonce, requestId);
+      securityHeaders.forEach((value, key) => {
+        response.headers.set(key, value);
+      });
+      return response;
+    };
+
+    // 4. RULE A: Unauthenticated access to protected route -> Redirect to Login
+    if (isProtectedPath && !isAuthenticated) {
+      logAuditEvent("WARN", "Unauthorized access attempt blocked", {
+        requestId,
+        pathname,
+        clientIp: req.headers.get("x-forwarded-for") || "unknown",
+      });
+
+      const loginUrl = new URL(PATHS.LOGIN, req.url);
+      loginUrl.searchParams.set("callbackUrl", `${pathname}${req.nextUrl.search}`);
+
+      return createRedirectResponse(loginUrl);
+    }
+
+    // 5. RULE B: Unverified authenticated access to protected route -> Redirect to OTP
+    if (
+      isAuthenticated &&
+      !isVerified &&
+      matchedProtectedRule?.requireVerification &&
+      !isVerificationPath
+    ) {
+      logAuditEvent("INFO", "Unverified user redirected to OTP verification page", {
+        requestId,
+        pathname,
+        userId: token?.sub,
+      });
+
+      const verifyUrl = new URL(PATHS.VERIFICATION_PATH, req.url);
+      if (token?.email) {
+        verifyUrl.searchParams.set("email", token.email);
+      }
+
+      return createRedirectResponse(verifyUrl);
+    }
+
+    // 6. RULE C: Verified authenticated access to OTP path -> Redirect to Dashboard
+    if (isAuthenticated && isVerified && isVerificationPath) {
+      const dashboardUrl = new URL(PATHS.DEFAULT_AUTHENTICATED_REDIRECT, req.url);
+      return createRedirectResponse(dashboardUrl);
+    }
+
+    // 7. RULE D: Role-Based Access Control Evaluation
+    if (isAuthenticated && matchedProtectedRule?.roles) {
+      const hasRequiredRole = isRoleAuthorized(userRole, matchedProtectedRule.roles);
+
+      if (!hasRequiredRole) {
+        logAuditEvent("WARN", "Forbidden role access attempt blocked", {
+          requestId,
+          pathname,
+          userId: token?.sub,
+          userRole,
+          requiredRoles: matchedProtectedRule.roles,
+        });
+
+        const unauthorizedUrl = new URL(PATHS.UNAUTHORIZED, req.url);
+        return createRedirectResponse(unauthorizedUrl);
+      }
+    }
+
+    // 8. RULE E: Authenticated access to Guest-Only route -> Redirect to Dashboard / Safe Callback
+    if (isGuestOnlyPath && isAuthenticated) {
+      logAuditEvent("INFO", "Authenticated user redirected away from guest route", {
+        requestId,
+        pathname,
+        userId: token?.sub,
+      });
+
+      const requestedCallback = searchParams.get("callbackUrl");
+      const safeCallback = getSafeCallbackUrl(requestedCallback, origin);
+
+      let redirectUrl: URL;
+      if (!isVerified) {
+        redirectUrl = new URL(PATHS.VERIFICATION_PATH, req.url);
+        if (token?.email) {
+          redirectUrl.searchParams.set("email", token.email);
+        }
+      } else {
+        redirectUrl = new URL(safeCallback || PATHS.DEFAULT_AUTHENTICATED_REDIRECT, req.url);
+      }
+
+      return createRedirectResponse(redirectUrl);
+    }
+
+    // 9. Proceed with injected context headers and security headers
+    const response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
     });
-  }
 
-  const isAuthenticated = Boolean(token);
-  
-  // Google/OAuth sign-ins default to verified unless explicitly set false
-  const isVerified = token?.isVerified !== undefined ? Boolean(token.isVerified) : true;
-  const userRole: UserRole = token?.role || "USER";
-
-  const isGuestOnlyPath = matchesPrefix(pathname, ROUTE_RULES.GUEST_ONLY);
-  const isVerificationPath = normalizePathname(pathname) === normalizePathname(ROUTE_RULES.VERIFICATION_PATH);
-  const matchedProtectedRule = findMatchingRouteRule(pathname);
-  const isProtectedPath = Boolean(matchedProtectedRule);
-
-  // Initialize downstream request headers
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-request-id", requestId);
-  requestHeaders.set("x-nonce", nonce);
-
-  if (isAuthenticated) {
-    requestHeaders.set("x-user-id", token?.sub || "");
-    requestHeaders.set("x-user-role", userRole);
-    requestHeaders.set("x-user-verified", String(isVerified));
-  }
-
-  /** Helper to construct response with full security headers */
-  const createRedirectResponse = (url: URL): NextResponse => {
-    const response = NextResponse.redirect(url);
     const securityHeaders = generateSecurityHeaders(nonce, requestId);
     securityHeaders.forEach((value, key) => {
       response.headers.set(key, value);
     });
+
     return response;
-  };
-
-  // 4. RULE A: Protected Route Guard (Unauthenticated -> Login)
-  if (isProtectedPath && !isAuthenticated) {
-    logAuditEvent("WARN", "Unauthorized access attempt blocked", {
+  } catch (fatalError: unknown) {
+    const errMessage = fatalError instanceof Error ? fatalError.message : "Fatal Edge Failure";
+    logAuditEvent("ERROR", "Unhandled exception in Edge middleware pipeline", {
       requestId,
       pathname,
-      clientIp: req.headers.get("x-forwarded-for") || "unknown",
+      error: errMessage,
     });
 
-    const loginUrl = new URL(PATHS.LOGIN, req.url);
-    loginUrl.searchParams.set("callbackUrl", `${pathname}${req.nextUrl.search}`);
-
-    return createRedirectResponse(loginUrl);
-  }
-
-  // 5. RULE B: Unverified Account Guard (Authenticated + Unverified -> Verify OTP)
-  if (
-    isAuthenticated &&
-    !isVerified &&
-    matchedProtectedRule?.requireVerification &&
-    !isVerificationPath
-  ) {
-    logAuditEvent("INFO", "Unverified user redirected to OTP verification page", {
-      requestId,
-      pathname,
-      userId: token?.sub,
+    return new NextResponse("Internal Security Error", {
+      status: 500,
+      headers: generateSecurityHeaders(nonce, requestId),
     });
-
-    const verifyUrl = new URL(PATHS.VERIFICATION_PATH, req.url);
-    if (token?.email) {
-      verifyUrl.searchParams.set("email", token.email);
-    }
-
-    return createRedirectResponse(verifyUrl);
   }
-
-  // 6. RULE C: Already Verified Redirect away from /verify-otp
-  if (isAuthenticated && isVerified && isVerificationPath) {
-    const dashboardUrl = new URL(PATHS.DEFAULT_AUTHENTICATED_REDIRECT, req.url);
-    return createRedirectResponse(dashboardUrl);
-  }
-
-  // 7. RULE D: Role-Based Access Control (RBAC Verification with Hierarchy)
-  if (isAuthenticated && matchedProtectedRule?.roles) {
-    const hasRequiredRole = isRoleAuthorized(userRole, matchedProtectedRule.roles);
-
-    if (!hasRequiredRole) {
-      logAuditEvent("WARN", "Forbidden role access attempt blocked", {
-        requestId,
-        pathname,
-        userId: token?.sub,
-        userRole,
-        requiredRoles: matchedProtectedRule.roles,
-      });
-
-      const unauthorizedUrl = new URL(PATHS.UNAUTHORIZED, req.url);
-      return createRedirectResponse(unauthorizedUrl);
-    }
-  }
-
-  // 8. RULE E: Guest-Only Route Guard (Authenticated -> App Dashboard or Safe Callback)
-  if (isGuestOnlyPath && isAuthenticated) {
-    logAuditEvent("INFO", "Authenticated user redirected away from guest route", {
-      requestId,
-      pathname,
-      userId: token?.sub,
-    });
-
-    const requestedCallback = searchParams.get("callbackUrl");
-    const safeCallback = getSafeCallbackUrl(requestedCallback, origin);
-
-    let redirectUrl: URL;
-    if (!isVerified) {
-      redirectUrl = new URL(PATHS.VERIFICATION_PATH, req.url);
-      if (token?.email) {
-        redirectUrl.searchParams.set("email", token.email);
-      }
-    } else {
-      redirectUrl = new URL(safeCallback || PATHS.DEFAULT_AUTHENTICATED_REDIRECT, req.url);
-    }
-
-    return createRedirectResponse(redirectUrl);
-  }
-
-  // 9. Proceed Request with Injected Context and Security Headers
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
-  const securityHeaders = generateSecurityHeaders(nonce, requestId);
-  securityHeaders.forEach((value, key) => {
-    response.headers.set(key, value);
-  });
-
-  return response;
 }
 
 // ============================================================================
