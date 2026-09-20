@@ -9,6 +9,11 @@
     "start": "next start",
     "lint": "next lint"
   },
+  "allowScripts": {
+    "@google/genai": true,
+    "protobufjs": true,
+    "unrs-resolver": true
+  },
   "dependencies": {
     "@ai-sdk/google": "^4.0.30",
     "@auth/mongodb-adapter": "^3.11.2",
