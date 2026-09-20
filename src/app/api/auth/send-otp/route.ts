@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
+    const { email, context = "SIGNUP" } = await req.json();
 
     // 1. Basic validation
     if (!email || typeof email !== "string") {
@@ -25,19 +25,35 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    // 2. Check if user already exists
+    // 2. Check user existence contextually
     const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "An account with this email already exists." },
-        { status: 409 }
-      );
+    
+    if (context === "SIGNUP") {
+      // If user exists and is verified, don't allow signup OTP
+      if (existingUser && existingUser.isVerified) {
+        return NextResponse.json(
+          { error: "An account with this email already exists." },
+          { status: 409 }
+        );
+      }
+    } else if (context === "FORGOT_PASSWORD") {
+      // If forgot password, user MUST exist
+      if (!existingUser) {
+        // Return 200 to prevent email enumeration, but don't actually send
+        return NextResponse.json(
+          { message: "If an account is associated with this email address, a password reset code has been sent." },
+          { status: 200 }
+        );
+      }
+    } else {
+      return NextResponse.json({ error: "Invalid context provided." }, { status: 400 });
     }
 
     // 3. Rate-limiting check (Prevent spam: 1 OTP request per 30 seconds)
+    const tokenType = context === "FORGOT_PASSWORD" ? "RESET_PASSWORD" : "VERIFY_EMAIL";
     const recentToken = await VerificationToken.findOne({
       email: normalizedEmail,
-      type: "VERIFY_EMAIL",
+      type: tokenType,
     }).sort({ createdAt: -1 });
 
     if (recentToken) {
@@ -58,7 +74,7 @@ export async function POST(req: Request) {
     // 4. Delete existing pending verification tokens for this email
     await VerificationToken.deleteMany({
       email: normalizedEmail,
-      type: "VERIFY_EMAIL",
+      type: tokenType,
     });
 
     // 5. Generate and hash OTP
@@ -69,16 +85,21 @@ export async function POST(req: Request) {
     // 6. Save token to Database
     await VerificationToken.create({
       email: normalizedEmail,
-      type: "VERIFY_EMAIL",
+      type: tokenType,
       otpHash,
       expiresAt,
     });
 
     // 7. Dispatch Email via Resend
-    await sendVerificationOTP(normalizedEmail, rawOTP);
+    if (context === "FORGOT_PASSWORD") {
+      const { sendResetOTP } = await import("@/lib/email");
+      await sendResetOTP(normalizedEmail, rawOTP);
+    } else {
+      await sendVerificationOTP(normalizedEmail, rawOTP);
+    }
 
     return NextResponse.json(
-      { message: "Verification code sent to your email." },
+      { message: context === "FORGOT_PASSWORD" ? "If an account is associated with this email address, a password reset code has been sent." : "Verification code sent to your email." },
       { status: 200 }
     );
   } catch (error: any) {

@@ -30,6 +30,8 @@ export interface MoneyPlantUserProfile {
   readonly isVerified: boolean;
   /** Primary authentication provider used for initial authentication */
   readonly provider: AuthProviderType;
+  /** Role based access control (RBAC) assigned role */
+  readonly role?: string;
   /** Indicates whether the user has fully completed their onboarding setup */
   readonly onboardingCompleted: boolean;
   /** Tracks the specific step in the onboarding flow (if pending) */
@@ -43,6 +45,7 @@ export interface MoneyPlantUserEntity extends DefaultUser {
   id: string;
   isVerified?: boolean;
   provider?: AuthProviderType;
+  role?: string;
   onboardingCompleted?: boolean;
   onboardingStep?: string | null;
   rememberMe?: boolean;
@@ -94,6 +97,8 @@ declare module "next-auth/jwt" {
     isVerified: boolean;
     /** Authentication provider used during authentication */
     provider: AuthProviderType;
+    /** Role based access control (RBAC) assigned role */
+    role?: string;
     /** Onboarding completion flag */
     onboardingCompleted: boolean;
     /** Current step in the onboarding flow */
@@ -135,6 +140,7 @@ export type MoneyPlantJWT = {
   picture?: string | null;
   isVerified: boolean;
   provider: AuthProviderType;
+  role?: string;
   onboardingCompleted: boolean;
   onboardingStep?: string | null;
   iat?: number;

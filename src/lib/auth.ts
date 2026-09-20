@@ -15,6 +15,7 @@ export interface SessionUser {
   image: string | null;
   isVerified: boolean;
   provider: "credentials" | "google";
+  role?: string;
   onboardingCompleted: boolean;
   onboardingStep?: string | null;
 }
@@ -34,6 +35,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       image: session.user.image || null,
       isVerified: session.user.isVerified ?? true,
       provider: session.user.provider || "credentials",
+      role: session.user.role || "USER",
       onboardingCompleted: session.user.onboardingCompleted ?? false,
       onboardingStep: session.user.onboardingStep ?? null,
     };

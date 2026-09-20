@@ -20,13 +20,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const parsed = verifyEmailOtpSchema.safeParse(body);
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message || "Invalid verification payload.";
-      return authJsonResponse({ success: false, message }, 422);
-    }
+    const { email, otp, context = "SIGNUP" } = body as { email: string, otp: string, context?: "SIGNUP" | "FORGOT_PASSWORD" };
 
-    const { email, otp } = parsed.data;
+    if (!email || !otp) {
+      return authJsonResponse({ success: false, message: "Email and OTP are required." }, 400);
+    }
 
     await dbConnect();
 
@@ -35,13 +33,13 @@ export async function POST(req: Request) {
       return authJsonResponse(
         {
           success: false,
-          message: "No pending registration found for this email. Please sign up again.",
+          message: context === "SIGNUP" ? "No pending registration found for this email. Please sign up again." : "Account not found.",
         },
         404
       );
     }
 
-    if (user.isVerified) {
+    if (context === "SIGNUP" && user.isVerified) {
       return authJsonResponse(
         {
           success: true,
@@ -51,9 +49,10 @@ export async function POST(req: Request) {
       );
     }
 
+    const tokenType = context === "FORGOT_PASSWORD" ? "RESET_PASSWORD" : "VERIFY_EMAIL";
     const tokenRecord = await VerificationToken.findOne({
       email,
-      type: "VERIFY_EMAIL",
+      type: tokenType,
     }).sort({ createdAt: -1 });
 
     if (!tokenRecord) {
@@ -85,17 +84,29 @@ export async function POST(req: Request) {
       );
     }
 
-    user.isVerified = true;
-    await user.save();
-    await VerificationToken.deleteOne({ _id: tokenRecord._id });
-
-    return authJsonResponse(
-      {
-        success: true,
-        message: "Email verified successfully. You can now sign in.",
-      },
-      200
-    );
+    if (context === "SIGNUP") {
+      user.isVerified = true;
+      await user.save();
+      await VerificationToken.deleteOne({ _id: tokenRecord._id });
+      
+      return authJsonResponse(
+        {
+          success: true,
+          message: "Email verified successfully. You can now sign in.",
+        },
+        200
+      );
+    } else {
+      // For FORGOT_PASSWORD, we don't delete the token yet because it's needed for the actual password reset POST
+      // We just confirm it's valid so the frontend can proceed to the new password form
+      return authJsonResponse(
+        {
+          success: true,
+          message: "OTP verified successfully. Please proceed to reset your password.",
+        },
+        200
+      );
+    }
   } catch (error) {
     console.error("[VERIFY_OTP_ERROR]:", error);
     return authJsonResponse(

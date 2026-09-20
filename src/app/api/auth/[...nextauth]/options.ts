@@ -113,7 +113,7 @@ export const authOptions: NextAuthOptions = {
         // 2. Fetch user profile with explicit password selection
         const user = (await UserModel.findOne({
           email: normalizedEmail,
-        }).select("+password")) as IUserWithId | null;
+        }).select("+password +role")) as IUserWithId | null;
 
         // 3. Mitigate timing attacks if user does not exist
         if (!user) {
@@ -161,6 +161,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           image: user.image || null,
           provider: (user.provider as AuthProviderType) || "credentials",
+          role: (user as any).role || "USER",
           isVerified: user.isVerified ?? true,
           onboardingCompleted: user.onboardingCompleted ?? false,
           onboardingStep,
@@ -267,6 +268,7 @@ export const authOptions: NextAuthOptions = {
               image: user.image || null,
               provider: "google",
               providerId: account.providerAccountId,
+              role: "USER",
               isVerified: true,
               onboardingCompleted: false,
               onboardingStep: "PROFILE_SETUP",
@@ -298,6 +300,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           user.provider = "google";
+          user.role = (existingUser || {}).role || "USER";
           user.isVerified = true;
 
           logAuthEvent("INFO", "Google OAuth synchronization completed successfully.", {
@@ -326,6 +329,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.provider = user.provider || "credentials";
+        token.role = user.role || "USER";
         token.isVerified = user.isVerified ?? true;
         token.onboardingCompleted = user.onboardingCompleted ?? false;
         token.onboardingStep = user.onboardingStep || null;
@@ -380,6 +384,7 @@ export const authOptions: NextAuthOptions = {
           ...session.user,
           id: token.id,
           provider: token.provider || "credentials",
+          role: token.role || "USER",
           isVerified: token.isVerified ?? true,
           onboardingCompleted: Boolean(token.onboardingCompleted),
           onboardingStep: token.onboardingStep || null,
