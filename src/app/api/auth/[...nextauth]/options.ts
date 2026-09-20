@@ -16,7 +16,7 @@ import dbConnect from "@/lib/dbConnect";
 import { User as UserModel, IUser } from "@/models/User";
 import { AuthProviderType } from "@/types/next-auth";
 
-type IUserWithId = IUser & { _id: unknown };
+type IUserWithId = IUser & { _id: unknown; role?: string };
 
 // ============================================================================
 // ENVIRONMENT VARIABLE VALIDATION & CONFIGURATION

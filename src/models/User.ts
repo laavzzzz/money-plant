@@ -68,6 +68,7 @@ export interface IUser {
   phone?: string | null;
   provider: AuthProvider;
   providerId?: string | null;
+  role?: string;
   isVerified: boolean;
   location?: string;
   bio: string;
@@ -204,6 +205,11 @@ const UserSchema = new Schema<IUserDocument, IUserModel, IUserMethods>(
       type: String,
       required: false,
       default: null,
+    },
+    role: {
+      type: String,
+      default: "USER",
+      trim: true,
     },
     isVerified: {
       type: Boolean,
