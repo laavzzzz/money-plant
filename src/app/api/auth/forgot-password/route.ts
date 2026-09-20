@@ -30,9 +30,9 @@ const CONFIG = {
   TOKEN_TYPE: "RESET_PASSWORD" as const,
   TARGET_EXECUTION_TIME_MS: 600,
   HTTP_HEADERS: {
-    CACHE_CONTROL: "no-store, no-cache, must-revalidate, proxy-revalidate",
-    PRAGMA: "no-cache",
-    X_CONTENT_TYPE_OPTIONS: "nosniff",
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "X-Content-Type-Options": "nosniff",
   },
 } as const;
 

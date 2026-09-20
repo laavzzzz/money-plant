@@ -71,6 +71,9 @@ function createJsonResponse<T>(
     headers: {
       "Content-Type": "application/json",
       "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
     },
   });
 }

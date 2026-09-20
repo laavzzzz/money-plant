@@ -85,8 +85,6 @@ const ROUTE_RULES = {
     "/register",
     "/forgot-password",
     "/reset-password",
-    "/verify-otp",
-    "/verify-email",
   ],
 
   /** Verification path for unverified authenticated users */

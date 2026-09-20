@@ -182,6 +182,8 @@ function ResetPasswordFormContent(): React.ReactElement {
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [redirectCountdown, setRedirectCountdown] = useState<number>(3);
+  const [isValidatingToken, setIsValidatingToken] = useState<boolean>(true);
+  const [isTokenValid, setIsTokenValid] = useState<boolean>(false);
 
   // Form Setup
   const {
@@ -206,6 +208,28 @@ function ResetPasswordFormContent(): React.ReactElement {
   useEffect(() => {
     if (tokenFromUrl) {
       setValue("token", tokenFromUrl);
+      
+      // Validate token
+      const validateToken = async () => {
+        try {
+          const res = await fetch(`${API_RESET_PASSWORD_ENDPOINT}?token=${encodeURIComponent(tokenFromUrl)}`);
+          const data = await res.json();
+          if (res.ok && data.valid) {
+            setIsTokenValid(true);
+          } else {
+            setIsTokenValid(false);
+          }
+        } catch {
+          setIsTokenValid(false);
+        } finally {
+          setIsValidatingToken(false);
+        }
+      };
+      
+      validateToken();
+    } else {
+      setIsValidatingToken(false);
+      setIsTokenValid(false);
     }
   }, [tokenFromUrl, setValue]);
 
@@ -270,7 +294,16 @@ function ResetPasswordFormContent(): React.ReactElement {
     []
   );
 
-  if (!tokenFromUrl && !isSuccess) {
+  if (isValidatingToken) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 space-y-3">
+        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" aria-hidden="true" />
+        <p className="text-sm text-slate-500">Validating reset credentials...</p>
+      </div>
+    );
+  }
+
+  if ((!tokenFromUrl || !isTokenValid) && !isSuccess) {
     return (
       <div className="p-6 text-center space-y-4">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 mb-2">
@@ -282,7 +315,7 @@ function ResetPasswordFormContent(): React.ReactElement {
         </p>
         <div className="pt-2">
           <Link
-            href="/forgot-password"
+            href="/login"
             className="inline-flex items-center justify-center w-full py-2.5 px-4 text-sm font-semibold rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 transition-colors"
           >
             Request New Reset Link

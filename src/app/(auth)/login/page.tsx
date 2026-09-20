@@ -534,6 +534,7 @@ FormAlert.displayName = "FormAlert";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status } = useSession();
 
   // Unique accessible DOM identifiers
@@ -570,8 +571,9 @@ export default function LoginPage() {
     AuthLogger.info("Initiating Google Federated OAuth handshake");
 
     try {
+      const callbackUrl = searchParams.get("callbackUrl") || DEFAULT_REDIRECT_URL;
       const result = await signIn("google", {
-        callbackUrl: DEFAULT_REDIRECT_URL,
+        callbackUrl: callbackUrl,
         redirect: false,
       });
 
@@ -637,6 +639,8 @@ export default function LoginPage() {
     const { mode, step, fields } = state;
     const email = fields.email.trim().toLowerCase();
     const password = fields.password;
+    const confirmPassword = state.confirmPassword;
+    const rememberMe = state.rememberMe;
 
     if (step === "credentials") {
       const validation = AuthValidator.validateCredentials(state);
@@ -680,7 +684,7 @@ export default function LoginPage() {
         AuthLogger.info("Executing OTP verification handshake");
 
         await executeOtpVerification({ email, otp: otpCode });
-        await executeCredentialsSignIn({ email, password, redirect: false });
+        await executeCredentialsSignIn({ email, password, rememberMe, redirect: false });
 
         dispatch({ type: "SET_SUCCESS", payload: "Identity Verified! Redirecting..." });
         router.push(DEFAULT_REDIRECT_URL);
@@ -800,7 +804,7 @@ export default function LoginPage() {
                     <InputField
                       id={passwordInputId}
                       label="Account Password Signature"
-                      type="password"
+                      type={state.showPassword ? "text" : "password"}
                       value={state.fields.password}
                       placeholder="••••••••••••"
                       autoComplete={state.mode === "login" ? "current-password" : "new-password"}
@@ -810,10 +814,59 @@ export default function LoginPage() {
                       describedBy={state.error ? alertRegionId : undefined}
                       onChange={(e) => handleFieldChange("password", e.target.value)}
                     />
+                    
+                    <button
+                      type="button"
+                      onClick={() => dispatch({ type: "TOGGLE_SHOW_PASSWORD" })}
+                      className="absolute right-4 top-[38px] text-[var(--text-light)] hover:text-[var(--text-main)] transition-colors"
+                      aria-label={state.showPassword ? "Hide password" : "Show password"}
+                    >
+                      {state.showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                    
+                    {state.mode === "signup" && state.fields.password.length > 0 && (
+                      <div className="mt-4">
+                        <PasswordStrength password={state.fields.password} />
+                      </div>
+                    )}
+                    
+                    {state.mode === "signup" && (
+                      <div className="pt-2 relative">
+                        <InputField
+                          id={`${passwordInputId}-confirm`}
+                          label="Confirm Password Signature"
+                          type={state.showPassword ? "text" : "password"}
+                          value={state.confirmPassword}
+                          placeholder="••••••••••••"
+                          autoComplete="new-password"
+                          disabled={isInteractionDisabled}
+                          icon={<Lock size={16} />}
+                          hasError={Boolean(state.error && state.confirmPassword !== state.fields.password)}
+                          describedBy={state.error ? alertRegionId : undefined}
+                          onChange={(e) => dispatch({ type: "SET_CONFIRM_PASSWORD", payload: e.target.value })}
+                        />
+                      </div>
+                    )}
 
                     {/* Forgot Password Link Trigger */}
                     {state.mode === "login" && (
-                      <div className="flex justify-end pt-1">
+                      <div className="flex justify-between items-center pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <div className="relative flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={state.rememberMe}
+                              onChange={(e) => dispatch({ type: "SET_REMEMBER_ME", payload: e.target.checked })}
+                              className="peer sr-only"
+                            />
+                            <div className="w-4 h-4 border border-white/20 rounded peer-checked:bg-yellow-400 peer-checked:border-yellow-400 transition-colors flex items-center justify-center">
+                              <CheckCircle2 size={12} className="text-black opacity-0 peer-checked:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold text-[var(--text-light)] group-hover:text-[var(--text-main)] transition-colors uppercase tracking-wider select-none">
+                            Remember Me
+                          </span>
+                        </label>
                         <button
                           type="button"
                           disabled={isInteractionDisabled}
