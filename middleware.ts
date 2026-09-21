@@ -5,7 +5,7 @@
  * enforcement, role-based access control (RBAC), open redirect prevention, OWASP security headers,
  * and structured audit telemetry.
  * * @module middleware
- * @version 3.5.0
+ * @version 3.6.0
  */
 
 import { NextResponse } from "next/server";
@@ -73,11 +73,13 @@ const ROLE_HIERARCHY: Readonly<Record<UserRole, number>> = Object.freeze({
   SUPERADMIN: 4,
 });
 
-/** Static asset and public bypass prefix targets */
+/** Static asset and public bypass prefix targets including web manifests */
 const PUBLIC_BYPASS_SET = new Set([
   "/_next",
   "/static",
   "/favicon.ico",
+  "/manifest.webmanifest",
+  "/manifest.json",
   "/icons",
   "/api/auth",
   "/api/health",
@@ -108,7 +110,7 @@ const PROTECTED_RULES: readonly RouteRule[] = Object.freeze([
 ]);
 
 // ============================================================================
-// SECURITY & CRYPTO UTILITIES
+// SECURITY UTILITIES
 // ============================================================================
 
 /**
@@ -247,7 +249,7 @@ function generateSecurityHeaders(requestId: string): Headers {
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data:`,
     `connect-src 'self' https:`,
-    `manifest-src 'self' https://vercel.com`,
+    `manifest-src 'self' https:`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
@@ -463,6 +465,14 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icons/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Match all request paths except for:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico & icons
+     * - manifest.webmanifest & manifest.json
+     * - public image assets (.png, .svg, .jpg, etc.)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest|manifest\\.json|icons/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
