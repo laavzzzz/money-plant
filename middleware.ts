@@ -2,10 +2,10 @@
  * @file src/middleware.ts
  * @description Enterprise Security, RBAC & Access Control Middleware
  * Edge-compatible Next.js middleware handling JWT verification, account verification state
- * enforcement, role-based access control (RBAC), open redirect prevention, strict CSP compatibility,
- * OWASP security headers, and structured audit telemetry.
+ * enforcement, role-based access control (RBAC), open redirect prevention, OWASP security headers,
+ * and structured audit telemetry.
  * * @module middleware
- * @version 3.4.0
+ * @version 3.5.0
  */
 
 import { NextResponse } from "next/server";
@@ -110,19 +110,6 @@ const PROTECTED_RULES: readonly RouteRule[] = Object.freeze([
 // ============================================================================
 // SECURITY & CRYPTO UTILITIES
 // ============================================================================
-
-/**
- * Generates an Edge-native Base64-encoded cryptographically secure random nonce.
- */
-function generateNonce(): string {
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  let binary = "";
-  for (let i = 0; i < array.length; i++) {
-    binary += String.fromCharCode(array[i]);
-  }
-  return btoa(binary);
-}
 
 /**
  * Normalizes a URL pathname by stripping trailing slashes and coercing to lowercase.
@@ -248,14 +235,14 @@ function logAuditEvent(
 }
 
 /**
- * Generates OWASP Compliant Security Headers with dynamic CSP Nonce.
+ * Generates OWASP Compliant Security Headers tailored for Next.js App Router asset loading.
  */
-function generateSecurityHeaders(nonce: string, requestId: string): Headers {
+function generateSecurityHeaders(requestId: string): Headers {
   const headers = new Headers();
 
   const cspHeader = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https:`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https:`,
     `font-src 'self' data:`,
@@ -278,7 +265,6 @@ function generateSecurityHeaders(nonce: string, requestId: string): Headers {
   headers.set("X-Permitted-Cross-Domain-Policies", "none");
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
   headers.set("x-request-id", requestId);
-  headers.set("x-nonce", nonce);
 
   return headers;
 }
@@ -289,7 +275,6 @@ function generateSecurityHeaders(nonce: string, requestId: string): Headers {
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const requestId = req.headers.get("x-request-id") || crypto.randomUUID();
-  const nonce = generateNonce();
   const { pathname, searchParams, origin } = req.nextUrl;
 
   try {
@@ -308,7 +293,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       if (process.env.NODE_ENV === "production") {
         return new NextResponse("Internal Security Error", {
           status: 500,
-          headers: generateSecurityHeaders(nonce, requestId),
+          headers: generateSecurityHeaders(requestId),
         });
       }
     }
@@ -344,7 +329,6 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     // Initialize downstream context headers
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-request-id", requestId);
-    requestHeaders.set("x-nonce", nonce);
 
     if (isAuthenticated) {
       requestHeaders.set("x-user-id", token?.sub || "");
@@ -355,7 +339,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     /** Helper to construct response with full security headers */
     const createRedirectResponse = (url: URL): NextResponse => {
       const response = NextResponse.redirect(url);
-      const securityHeaders = generateSecurityHeaders(nonce, requestId);
+      const securityHeaders = generateSecurityHeaders(requestId);
       securityHeaders.forEach((value, key) => {
         response.headers.set(key, value);
       });
@@ -452,7 +436,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       },
     });
 
-    const securityHeaders = generateSecurityHeaders(nonce, requestId);
+    const securityHeaders = generateSecurityHeaders(requestId);
     securityHeaders.forEach((value, key) => {
       response.headers.set(key, value);
     });
@@ -468,7 +452,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
     return new NextResponse("Internal Security Error", {
       status: 500,
-      headers: generateSecurityHeaders(nonce, requestId),
+      headers: generateSecurityHeaders(requestId),
     });
   }
 }
@@ -479,13 +463,6 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico & icons
-     * - public image assets (.png, .svg, .jpg, etc.)
-     */
     "/((?!_next/static|_next/image|favicon.ico|icons/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
