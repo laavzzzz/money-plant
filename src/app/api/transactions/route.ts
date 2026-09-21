@@ -1,15 +1,26 @@
-import { NextResponse } from "next/server";
-import {
-  createTransaction,
-  fetchAllTransactions,
-} from "@/lib/data/transactions";
+/**
+ * @file src/app/api/transactions/route.ts
+ * @module TransactionsCollectionRoute
+ * @description Enterprise REST API endpoint for fetching and creating financial transactions.
+ * Replaces legacy file-system data stores with production-ready MongoDB integration.
+ * Enforces strict NextAuth session validation, user-scoped data isolation, and robust payload sanitization.
+ * 
+ * @version 3.2.0
+ */
 
-// Enforce dynamic rendering at request time (disables build-time prerendering)
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import dbConnect from "@/lib/dbConnect";
+import { Transaction as TransactionModel } from "@/models/Transaction";
+
+// Enforce dynamic rendering at request time (disables static build-time caching)
 export const dynamic = "force-dynamic";
 
-/**
- * Common response structures for consistency across consumer components
- */
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -18,118 +29,167 @@ interface ApiResponse<T = unknown> {
 }
 
 interface TransactionPayload {
-  title: string;
+  title?: string;
+  description?: string;
   amount: number | string;
   type: "income" | "expense";
   category: string;
   date?: string;
 }
 
-/**
- * GET /api/transactions
- * Fetches all transactions from the underlying data source.
- */
+// ============================================================================
+// GET HANDLER: FETCH ALL USER TRANSACTIONS
+// ============================================================================
+
 export async function GET(): Promise<NextResponse<ApiResponse>> {
   try {
-    const { transactions, source } = await fetchAllTransactions();
+    // 1. Authenticate Request
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized access. Please log in." },
+        { status: 401 }
+      );
+    }
 
+    // 2. Establish Database Connection
+    await dbConnect();
+
+    // 3. Fetch Data with Strict User Isolation
+    // Only retrieve transactions strictly belonging to the authenticated user ID
+    const transactions = await TransactionModel.find({ userId: session.user.id })
+      .sort({ date: -1 }) // Sort newest first
+      .lean();
+
+    // Normalize MongoDB _id to string id for frontend consumption
+    const normalizedTransactions = transactions.map((tx: any) => ({
+      id: String(tx._id),
+      description: tx.description || tx.title || "Transaction",
+      amount: Number(tx.amount),
+      type: tx.type,
+      category: tx.category || "General",
+      date: tx.date ? new Date(tx.date).toISOString() : new Date().toISOString(),
+    }));
+
+    // 4. Return Authorized Payload
     return NextResponse.json(
       {
         success: true,
-        data: transactions,
-        source,
+        data: normalizedTransactions,
+        source: "mongodb",
       },
       { status: 200 }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-    console.error("[GET /api/transactions] Failure:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown database error";
+    console.error("[GET /api/transactions] Failure:", errorMessage);
 
     return NextResponse.json(
       {
         success: false,
-        message: `Failed to fetch transactions: ${errorMessage}`,
+        message: "An internal server error occurred while retrieving transactions.",
       },
       { status: 500 }
     );
   }
 }
 
-/**
- * POST /api/transactions
- * Validates and stores a new financial transaction.
- */
-export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
+// ============================================================================
+// POST HANDLER: CREATE NEW TRANSACTION
+// ============================================================================
+
+export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
-    // Ensure content type is application/json before parsing
+    // 1. Authenticate Request
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized access. Please log in." },
+        { status: 401 }
+      );
+    }
+
+    // 2. Enforce Strict Content-Type Security
     const contentType = req.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       return NextResponse.json(
-        { success: false, message: "Invalid Content-Type. Expected application/json" },
+        { success: false, message: "Invalid Content-Type. Expected application/json." },
         { status: 415 }
       );
     }
 
+    // 3. Parse Payload
     const body = (await req.json()) as Partial<TransactionPayload>;
-    const { title, amount, type, category, date } = body;
+    const { title, description, amount, type, category, date } = body;
 
-    // 1. Structural Validation (Strict type checking instead of loosely comparing values)
-    if (
-      title === undefined || 
-      title === null || 
-      amount === undefined || 
-      amount === null || 
-      !type || 
-      !category
-    ) {
+    // Use either title or description, depending on what the client sends
+    const finalDescription = title || description;
+
+    // 4. Structural & Type Validation
+    if (!finalDescription || amount === undefined || amount === null || !type || !category) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields: title, amount, type, and category are mandatory." },
+        { success: false, message: "Missing required fields: description (or title), amount, type, and category are mandatory." },
         { status: 400 }
       );
     }
 
-    // 2. Type Enforce Check
     if (!["income", "expense"].includes(type)) {
       return NextResponse.json(
-        { success: false, message: "Invalid transaction type. Must be either 'income' or 'expense'." },
+        { success: false, message: "Invalid transaction type. Must be strictly 'income' or 'expense'." },
         { status: 400 }
       );
     }
 
-    // 3. Numeric Sanitation
+    // 5. Numeric Sanitization
     const parsedAmount = Number(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return NextResponse.json(
-        { success: false, message: "Invalid amount. Must be a valid positive number." },
+        { success: false, message: "Invalid amount. Must be a valid positive number greater than 0." },
         { status: 400 }
       );
     }
 
-    // Execute business logic mapping clean payloads
-    const { transaction, source } = await createTransaction({
-      title: String(title).trim(),
+    // 6. Establish Database Connection
+    await dbConnect();
+
+    // 7. Secure Insertion logic
+    // Bind the transaction directly to the authenticated session's user ID
+    const newTransaction = await TransactionModel.create({
+      userId: session.user.id,
+      description: String(finalDescription).trim().substring(0, 100), // Enforce length limits
       amount: parsedAmount,
       type,
-      category: String(category).trim(),
-      date: date ? String(date) : new Date().toISOString(),
+      category: String(category).trim().substring(0, 50),
+      date: date ? new Date(date) : new Date(),
     });
 
+    // Normalize for response payload
+    const normalizedTransaction = {
+      id: String(newTransaction._id),
+      description: newTransaction.description,
+      amount: newTransaction.amount,
+      type: newTransaction.type,
+      category: newTransaction.category,
+      date: newTransaction.date.toISOString(),
+    };
+
+    // 8. Successful Creation Response
     return NextResponse.json(
       {
         success: true,
-        data: transaction,
-        source,
+        data: normalizedTransaction,
+        source: "mongodb",
       },
       { status: 201 }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-    console.error("[POST /api/transactions] Failure:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown database error";
+    console.error("[POST /api/transactions] Failure:", errorMessage);
 
     return NextResponse.json(
       {
         success: false,
-        message: `Failed to record transaction: ${errorMessage}`,
+        message: "An internal server error occurred while recording the transaction.",
       },
       { status: 500 }
     );

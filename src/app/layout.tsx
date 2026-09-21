@@ -1,3 +1,13 @@
+/**
+ * @file src/app/layout.tsx
+ * @module RootLayout
+ * @description Enterprise Global Root Layout for MoneyPlant.
+ * Orchestrates core providers, SSR/SSG hydration boundaries, global font loading,
+ * PWA manifest injection, dynamic SVG filters, and top-level SEO/OpenGraph metadata.
+ * 
+ * @version 3.2.0
+ */
+
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
@@ -11,6 +21,11 @@ import "@/app/globals.css";
 // SYSTEM FONT ENGINE ARCHITECTURE
 // ============================================================================
 
+/**
+ * Primary UI Font: Plus Jakarta Sans
+ * Configured with subset optimization, swap display for LCP performance,
+ * and font fallback adjustments to prevent Cumulative Layout Shift (CLS).
+ */
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-plus-jakarta",
@@ -23,6 +38,10 @@ const plusJakarta = Plus_Jakarta_Sans({
 // ADVANCED ENTERPRISE SEO, GRAPH SCHEMA, & APPS PACKAGING
 // ============================================================================
 
+/** 
+ * Base URL resolution ensuring safe fallbacks for Vercel preview deployments
+ * and local development environments.
+ */
 const SERVER_ENV_URL = process.env.NEXT_PUBLIC_APP_URL || "https://moneyplant.dev";
 
 export const metadata: Metadata = {
@@ -82,7 +101,8 @@ export const metadata: Metadata = {
       "Your wealth is a complex ecosystem. Grow your portfolio, compete on leaderboards, and bypass the budget tax.",
     images: ["/og-image.png"],
   },
-  manifest: "/manifest.json",
+  // CRITICAL FIX: Aligned to .webmanifest to bypass Vercel SSO CORS issues
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -96,7 +116,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FDFDFD" },
-    { media: "(prefers-color-scheme: dark)", color: "#FDFDFD" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B0B0D" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -109,7 +129,7 @@ export const viewport: Viewport = {
 // ============================================================================
 
 interface RootLayoutProps {
-  children: React.ReactNode;
+  readonly children: React.ReactNode;
 }
 
 // ============================================================================
@@ -122,30 +142,24 @@ export default function RootLayout({ children }: RootLayoutProps) {
       lang="en"
       suppressHydrationWarning
       className={cn("h-full scroll-smooth", plusJakarta.variable)}
-      data-theme="light"
-      style={{ colorScheme: "light" }}
     >
       <body
         suppressHydrationWarning
         className={cn(
           "min-h-[100dvh] w-full font-sans antialiased",
           "selection:bg-yellow-200 selection:text-slate-900",
-          "overflow-x-hidden grain-overlay transform-gpu"
+          "overflow-x-hidden grain-overlay transform-gpu bg-[var(--bg-main)] text-[var(--text-main)]"
         )}
-        style={{
-          backgroundColor: "var(--bg-main, #FFFFFF)",
-          color: "var(--text-body-prose, #111827)",
-        }}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
+          defaultTheme="light" // Adjust to "system" or "dark" if you plan to enable dark mode later
+          forcedTheme="light" 
           enableSystem={false}
           disableTransitionOnChange
         >
           {/* Dynamic Background Mesh Engine */}
-          <div className="aurora-canvas-container" aria-hidden="true">
+          <div className="aurora-canvas-container pointer-events-none absolute inset-0 -z-50 overflow-hidden select-none" aria-hidden="true">
             <div className="glow-top-left-turquoise" />
             <div className="glow-top-right-cyan" />
             <div className="glow-bottom-left-mint" />
@@ -154,12 +168,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
           {/* Identity Validation & Financial Context Wrappers */}
           <AppProviders>
-            <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden transform-gpu bg-white">
+            <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden transform-gpu">
               <PageTransition>
                 <main
                   id="main-content-anchor"
                   role="main"
-                  className="flex-1 relative z-10 w-full text-slate-900"
+                  className="flex-1 relative z-10 w-full"
                 >
                   {children}
                 </main>
@@ -167,13 +181,13 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
               {/* Native Mobile Safety Padding */}
               <div
-                className="h-[env(safe-area-inset-bottom)] pointer-events-none w-full"
+                className="h-[env(safe-area-inset-bottom)] pointer-events-none w-full shrink-0"
                 aria-hidden="true"
               />
             </div>
           </AppProviders>
 
-          {/* Notification System */}
+          {/* Global Notification System */}
           <Toaster
             position="top-center"
             expand={false}
@@ -181,10 +195,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
             closeButton
             toastOptions={{
               className:
-                "glass-panel !rounded-[24px] !border border-gray-200 !px-6 !py-4 !shadow-2xl font-sans font-bold text-sm",
+                "glass-panel !rounded-[24px] !border border-white/20 !px-6 !py-4 !shadow-2xl font-sans font-bold text-sm",
               style: {
-                background: "rgba(255, 255, 255, 0.9)",
-                color: "#111827",
+                background: "var(--glass-bg, rgba(255, 255, 255, 0.9))",
+                color: "var(--text-main, #111827)",
                 backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
               },
@@ -196,6 +210,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <svg
           className="pointer-events-none absolute h-0 w-0 opacity-0 select-none hidden"
           aria-hidden="true"
+          focusable="false"
         >
           <defs>
             <filter id="noiseFilter">
