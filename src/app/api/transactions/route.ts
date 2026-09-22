@@ -2,10 +2,10 @@
  * @file src/app/api/transactions/route.ts
  * @module TransactionsCollectionRoute
  * @description Enterprise REST API endpoint for fetching and creating financial transactions.
- * Replaces legacy file-system data stores with production-ready MongoDB integration.
  * Enforces strict NextAuth session validation, user-scoped data isolation, and robust payload sanitization.
  * 
- * @version 3.2.0
+ * @version 3.3.0
+ * @author Senior Principal Security & Architecture Team
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -22,19 +22,30 @@ export const dynamic = "force-dynamic";
 // ============================================================================
 
 interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  source?: string;
+  readonly success: boolean;
+  readonly data?: T;
+  readonly message?: string;
+  readonly source?: string;
 }
 
 interface TransactionPayload {
-  title?: string;
-  description?: string;
-  amount: number | string;
-  type: "income" | "expense";
-  category: string;
-  date?: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly amount: number | string;
+  readonly type: "income" | "expense";
+  readonly category: string;
+  readonly date?: string;
+}
+
+interface IMongoTransactionDocument {
+  readonly _id: unknown;
+  readonly userId: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly amount: number;
+  readonly type: "income" | "expense";
+  readonly category?: string;
+  readonly date?: Date | string;
 }
 
 // ============================================================================
@@ -56,13 +67,12 @@ export async function GET(): Promise<NextResponse<ApiResponse>> {
     await dbConnect();
 
     // 3. Fetch Data with Strict User Isolation
-    // Only retrieve transactions strictly belonging to the authenticated user ID
-    const transactions = await TransactionModel.find({ userId: session.user.id })
-      .sort({ date: -1 }) // Sort newest first
-      .lean();
+    const transactions = (await TransactionModel.find({ userId: session.user.id })
+      .sort({ date: -1 })
+      .lean()) as unknown as readonly IMongoTransactionDocument[];
 
-    // Normalize MongoDB _id to string id for frontend consumption
-    const normalizedTransactions = transactions.map((tx: any) => ({
+    // Normalize MongoDB _id to string id for frontend consumption safely
+    const normalizedTransactions = transactions.map((tx) => ({
       id: String(tx._id),
       description: tx.description || tx.title || "Transaction",
       amount: Number(tx.amount),
@@ -122,7 +132,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     const body = (await req.json()) as Partial<TransactionPayload>;
     const { title, description, amount, type, category, date } = body;
 
-    // Use either title or description, depending on what the client sends
     const finalDescription = title || description;
 
     // 4. Structural & Type Validation
@@ -153,20 +162,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     await dbConnect();
 
     // 7. Secure Insertion logic
-    // Bind the transaction directly to the authenticated session's user ID
     const newTransaction = await TransactionModel.create({
       userId: session.user.id,
-      description: String(finalDescription).trim().substring(0, 100), // Enforce length limits
+      title: String(finalDescription).trim().substring(0, 100),
       amount: parsedAmount,
       type,
       category: String(category).trim().substring(0, 50),
       date: date ? new Date(date) : new Date(),
     });
 
-    // Normalize for response payload
     const normalizedTransaction = {
       id: String(newTransaction._id),
-      description: newTransaction.description,
+      description: newTransaction.title,
       amount: newTransaction.amount,
       type: newTransaction.type,
       category: newTransaction.category,
