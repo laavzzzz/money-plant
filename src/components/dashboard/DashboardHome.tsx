@@ -1,9 +1,20 @@
+/**
+ * @file src/components/dashboard/DashboardHome.tsx
+ * @module Components/Dashboard/DashboardHome
+ * @description Enterprise-grade, high-performance financial dashboard main layout container.
+ * Orchestrates gamified plant growth tracking, real-time balances, AI financial insights,
+ * active goals, transaction feeds, and leaderboard rankings with reduced-motion support.
+ * 
+ * @version 4.0.0
+ * @author Senior Principal Full-Stack Architecture Team
+ */
+
 "use client";
 
 import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, Variants, useReducedMotion } from "framer-motion";
-import { Plus, Target, Sparkles, Flame, Wallet, PiggyBank } from "lucide-react";
+import { Plus, Sparkles, Flame, Wallet, PiggyBank } from "lucide-react";
 import HeroCard from "@/components/dashboard/HeroCard";
 import PlantSection, { PlantStage } from "@/components/dashboard/PlantSection";
 import SafeToSpendCard from "@/components/dashboard/SafeToSpendCard";
@@ -17,7 +28,11 @@ import { useFinanceContext } from "@/components/providers/FinanceProvider";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { generateAIInsight } from "@/lib/ai";
 
-function DreamVault() {
+// ============================================================================
+// DREAM VAULT SUB-COMPONENT
+// ============================================================================
+
+function DreamVault(): React.ReactElement {
   const router = useRouter();
   const { openAdd } = useTransactionModal();
 
@@ -26,24 +41,25 @@ function DreamVault() {
       <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
         <div className="min-w-0">
           <h3 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2 truncate">
-            Dream Vault <Sparkles size={16} className="text-secondary shrink-0" />
+            Dream Vault <Sparkles size={16} className="text-secondary shrink-0" aria-hidden="true" />
           </h3>
           <p className="label-caps opacity-60 text-[10px] sm:text-xs">Manifesting wealth</p>
         </div>
         <button
           type="button"
           onClick={() => openAdd("income")}
-          className="p-2.5 sm:p-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl transition-all active:scale-95 shrink-0"
-          aria-label="Add savings"
+          className="p-2.5 sm:p-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-2xl transition-all active:scale-95 shrink-0 cursor-pointer"
+          aria-label="Add income savings to Dream Vault"
         >
-          <Plus size={22} />
+          <Plus size={22} aria-hidden="true" />
         </button>
       </div>
       <div className="space-y-3 sm:space-y-4 flex-1 min-h-0">
         <button
           type="button"
           onClick={() => router.push("/goals")}
-          className="w-full p-3 sm:p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between text-left hover:bg-white/10 transition-colors gap-2"
+          className="w-full p-3 sm:p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between text-left hover:bg-white/10 transition-colors gap-2 cursor-pointer"
+          aria-label="View active financial goals"
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-accent/20 rounded-xl flex items-center justify-center text-accent shrink-0">
@@ -68,16 +84,24 @@ function DreamVault() {
   );
 }
 
-// 🌿 FIXED: 'id' made completely optional to match the 'useTransactions' schema payload
+// ============================================================================
+// RECENT ACTIVITY SUB-COMPONENT
+// ============================================================================
+
 interface Transaction {
-  id?: string | number;
-  type: "income" | "expense";
-  category?: string;
-  date?: string | number | Date;
-  amount: number;
+  readonly id?: string | number;
+  readonly type: "income" | "expense";
+  readonly category?: string;
+  readonly date?: string | number | Date;
+  readonly amount: number;
 }
 
-function RecentActivity({ transactions }: { transactions: Transaction[] }) {
+interface RecentActivityProps {
+  readonly transactions: readonly Transaction[];
+}
+
+function RecentActivity({ transactions }: RecentActivityProps): React.ReactElement {
+  const router = useRouter();
   const latest = useMemo(() => [...(transactions || [])].slice(0, 3), [transactions]);
 
   return (
@@ -86,7 +110,11 @@ function RecentActivity({ transactions }: { transactions: Transaction[] }) {
         <h3 className="text-sm font-black uppercase tracking-widest text-text-light">
           Recent Activity
         </h3>
-        <button className="text-[10px] font-bold text-primary hover:underline">
+        <button
+          type="button"
+          onClick={() => router.push("/transactions")}
+          className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+        >
           View All
         </button>
       </div>
@@ -99,7 +127,7 @@ function RecentActivity({ transactions }: { transactions: Transaction[] }) {
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center shrink-0">
-                  <span className="text-xs">
+                  <span className="text-xs" aria-hidden="true">
                     {tx.type === "income" ? "💰" : "💸"}
                   </span>
                 </div>
@@ -118,7 +146,7 @@ function RecentActivity({ transactions }: { transactions: Transaction[] }) {
                 }`}
               >
                 {tx.type === "income" ? "+" : "-"}₹
-                {tx.amount.toLocaleString()}
+                {tx.amount.toLocaleString("en-IN")}
               </p>
             </div>
           ))
@@ -130,7 +158,56 @@ function RecentActivity({ transactions }: { transactions: Transaction[] }) {
   );
 }
 
-export default function DashboardHome() {
+// ============================================================================
+// ERROR STATE SUB-COMPONENT
+// ============================================================================
+
+interface ErrorStateProps {
+  readonly message: string;
+  readonly onRetry?: () => void;
+}
+
+function ErrorState({ message, onRetry }: ErrorStateProps): React.ReactElement {
+  return (
+    <div className="flex flex-col justify-center items-center min-h-[50vh] text-center px-4 w-full">
+      <div className="glass-panel p-8 sm:p-12 rounded-[32px] border-red-500/20 max-w-md w-full">
+        <p className="text-4xl mb-4" aria-hidden="true">⚠️</p>
+        <p className="text-red-400 text-lg font-bold">Garden Sync Interrupted</p>
+        <p className="text-xs text-text-light mt-2">{message}</p>
+        <button
+          type="button"
+          onClick={onRetry ?? (() => window.location.reload())}
+          className="mt-6 w-full sm:w-auto bg-white/10 hover:bg-white/15 px-8 py-3 rounded-full text-sm font-bold border border-white/10 cursor-pointer transition-all"
+        >
+          Re-sync System
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// DASHBOARD SKELETON SUB-COMPONENT
+// ============================================================================
+
+function DashboardSkeleton(): React.ReactElement {
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6 animate-pulse w-full">
+      <div className="lg:col-span-3 space-y-4 order-2 lg:order-1">
+        <div className="h-28 rounded-3xl bg-black/5 dark:bg-white/5" />
+        <div className="h-48 rounded-3xl bg-black/5 dark:bg-white/5" />
+      </div>
+      <div className="lg:col-span-6 h-72 sm:h-96 rounded-[32px] bg-black/5 dark:bg-white/5 order-1 lg:order-2" />
+      <div className="lg:col-span-3 h-64 rounded-3xl bg-black/5 dark:bg-white/5 order-3" />
+    </div>
+  );
+}
+
+// ============================================================================
+// MAIN DASHBOARD HOME COMPONENT
+// ============================================================================
+
+export default function DashboardHome(): React.ReactElement {
   const {
     transactions,
     loading,
@@ -147,12 +224,11 @@ export default function DashboardHome() {
   const { data: leaderboard, loading: leaderboardLoading } = useLeaderboard();
   const { openAdd } = useTransactionModal();
 
-  // 1. Detect system preference
+  // 1. Detect system motion preference
   const systemReducedMotion = useReducedMotion();
-  
   const reduced = Boolean(systemReducedMotion);
 
-  // 3. Memoized variants that adapt to the motion preference
+  // 2. Memoized motion variants adapting to user preferences
   const variants = useMemo(() => {
     const container: Variants = {
       hidden: { opacity: 0 },
@@ -174,16 +250,15 @@ export default function DashboardHome() {
           type: "spring",
           damping: 25,
           stiffness: 200,
-          max: 0.5
         },
       },
     };
     return { container, item };
   }, [reduced]);
 
-  // Memoize growth calculation based on a fixed target or dynamic goal
+  // 3. Memoize growth calculation
   const growth = useMemo(() => {
-    const target = 10000; // Define your milestone target here
+    const target = 10000; // Milestone target
     return Math.min(Math.max(0, savings) / target * 100, 100);
   }, [savings]);
 
@@ -192,20 +267,21 @@ export default function DashboardHome() {
     [income, expense]
   );
 
-  // safeStage must be defined before any conditional returns to comply with Rules of Hooks
+  // 4. Safely parse plant stage
   const safeStage: PlantStage = useMemo(() => {
-    const p = plantStage as any;
-    if (p && typeof p.level === "number") {
+    if (plantStage && typeof plantStage === "object" && "level" in plantStage) {
+      const p = plantStage as { level?: number; name?: string; min?: number };
+      const level = typeof p.level === "number" ? p.level : 1;
       return {
-        level: p.level,
-        name: p.name || `Level ${p.level}`,
-        min: p.min ?? 0,
+        level,
+        name: p.name || `Level ${level}`,
+        min: typeof p.min === "number" ? p.min : 0,
       };
     }
     return { level: 1, name: "Seed", min: 0 };
   }, [plantStage]);
 
-  // Handle loading and error states after all hooks have been called
+  // Handle loading and error states after all hooks are called
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -223,7 +299,7 @@ export default function DashboardHome() {
               Hi, {profile?.name?.split(" ")[0] || "User"}! 👋
             </h1>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-300 rounded-full text-xs font-black uppercase tracking-wider">
-              <Flame className="w-4 h-4 fill-orange-500 text-orange-500 animate-pulse" />
+              <Flame className="w-4 h-4 fill-orange-500 text-orange-500 animate-pulse" aria-hidden="true" />
               <span>{streak} days streak 🔥</span>
             </div>
           </div>
@@ -245,14 +321,14 @@ export default function DashboardHome() {
             variant="secondary"
             size="md"
             leftIcon={<Plus size={18} />}
-            className="w-full sm:w-auto font-black shadow-lg shadow-success/10 transition-all hover:scale-[1.02] active:scale-95"
+            className="w-full sm:w-auto font-black shadow-lg shadow-success/10 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer"
           >
             Add Transaction
           </Button>
 
           <div className="flex-1 sm:flex-initial glass-panel p-4 min-w-[160px] flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
-              <Wallet size={18} />
+              <Wallet size={18} aria-hidden="true" />
             </div>
             <div>
               <p className="text-[10px] font-black text-text-light uppercase tracking-wider">Balance</p>
@@ -262,14 +338,13 @@ export default function DashboardHome() {
 
           <div className="flex-1 sm:flex-initial glass-panel p-4 min-w-[160px] flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center text-success shrink-0">
-              <PiggyBank size={18} />
+              <PiggyBank size={18} aria-hidden="true" />
             </div>
             <div>
               <p className="text-[10px] font-black text-text-light uppercase tracking-wider">Income</p>
               <p className="text-base font-black text-text-main">₹{income.toLocaleString("en-IN")}</p>
             </div>
           </div>
-
         </motion.div>
       </div>
 
@@ -319,44 +394,6 @@ export default function DashboardHome() {
           </motion.div>
         </aside>
       </motion.div>
-    </div>
-  );
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6 animate-pulse w-full">
-      <div className="lg:col-span-3 space-y-4 order-2 lg:order-1">
-        <div className="h-28 rounded-3xl bg-black/5 dark:bg-white/5" />
-        <div className="h-48 rounded-3xl bg-black/5 dark:bg-white/5" />
-      </div>
-      <div className="lg:col-span-6 h-72 sm:h-96 rounded-[32px] bg-black/5 dark:bg-white/5 order-1 lg:order-2" />
-      <div className="lg:col-span-3 h-64 rounded-3xl bg-black/5 dark:bg-white/5 order-3" />
-    </div>
-  );
-}
-
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
-  return (
-    <div className="flex flex-col justify-center items-center min-h-[50vh] text-center px-4 w-full">
-      <div className="glass-panel p-8 sm:p-12 rounded-[32px] border-red-500/20 max-w-md w-full">
-        <p className="text-4xl mb-4">⚠️</p>
-        <p className="text-red-400 text-lg font-bold">Garden Sync Interrupted</p>
-        <p className="text-xs text-text-light mt-2">{message}</p>
-        <button
-          type="button"
-          onClick={onRetry ?? (() => window.location.reload())}
-          className="mt-6 w-full sm:w-auto bg-white/10 hover:bg-white/15 px-8 py-3 rounded-full text-sm font-bold border border-white/10"
-        >
-          Re-sync System
-        </button>
-      </div>
     </div>
   );
 }

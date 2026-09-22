@@ -5,7 +5,8 @@
  * Serves as the primary client-side dashboard presentation layer, rendering interactive
  * financial metric cards, transaction ledgers, quick action triggers, and empty states.
  *
- * @version 3.5.0
+ * @version 4.0.0
+ * @author Senior Principal Full-Stack Architecture Team
  */
 
 "use client";
@@ -24,7 +25,6 @@ import {
   Target,
   Sparkles,
   Receipt,
-  Filter,
   Search,
   ArrowUpRight,
   ArrowDownRight,
@@ -131,6 +131,7 @@ const MetricWidget = memo(function MetricWidget({
     </motion.article>
   );
 });
+MetricWidget.displayName = "MetricWidget";
 
 // ============================================================================
 // EMPTY LEDGER STATE COMPONENT
@@ -159,6 +160,7 @@ const EmptyLedgerState = memo(function EmptyLedgerState() {
     </div>
   );
 });
+EmptyLedgerState.displayName = "EmptyLedgerState";
 
 // ============================================================================
 // TRANSACTION LEDGER ROW COMPONENT
@@ -216,6 +218,7 @@ const TransactionRow = memo(function TransactionRow({
     </motion.div>
   );
 });
+TransactionRow.displayName = "TransactionRow";
 
 // ============================================================================
 // MAIN DASHBOARD CLIENT VIEW COMPONENT
@@ -225,17 +228,18 @@ export default function DashboardView({
   user,
   metrics,
   initialTransactions,
-}: DashboardViewProps) {
+}: DashboardViewProps): React.ReactElement {
   const [filter, setFilter] = useState<TimeframeFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Memoized filter and search execution
   const filteredTransactions = useMemo(() => {
-    return initialTransactions.filter((tx) => {
+    return (initialTransactions || []).filter((tx) => {
       const matchesFilter = filter === "all" || tx.type === filter;
-      const matchesSearch =
-        tx.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tx.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const desc = String(tx.description || "").toLowerCase();
+      const cat = String(tx.category || "").toLowerCase();
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = desc.includes(query) || cat.includes(query);
       return matchesFilter && matchesSearch;
     });
   }, [initialTransactions, filter, searchQuery]);
@@ -324,7 +328,8 @@ export default function DashboardView({
                   aria-hidden="true"
                 />
                 <input
-                  type="text"
+                  type="search"
+                  aria-label="Filter ledger entries"
                   placeholder="Filter entries..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -336,8 +341,10 @@ export default function DashboardView({
                 {(["all", "income", "expense"] as const).map((type) => (
                   <button
                     key={type}
+                    type="button"
                     onClick={() => setFilter(type)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                    aria-label={`Filter by ${type}`}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                       filter === type
                         ? "bg-yellow-400 text-black shadow"
                         : "text-[var(--text-light)] hover:text-white"

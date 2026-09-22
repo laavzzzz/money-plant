@@ -4,9 +4,10 @@
  * @description Enterprise Financial Dashboard Home Page for MoneyPlant.
  * Performs server-side session authentication, fetches user-scoped MongoDB financial
  * metrics, enforces complete data isolation between accounts, and renders real-time
- * financial overview statistics with intentional zero-data empty states.
+ * financial overview statistics with intentional zero-data empty states and elite UI loading skeletons.
  *
- * @version 3.4.0
+ * @version 4.0.0
+ * @author Senior Principal Full-Stack Architecture Team
  */
 
 import React, { Suspense } from "react";
@@ -38,21 +39,31 @@ export const dynamic = "force-dynamic";
 // ============================================================================
 
 interface FinancialMetrics {
-  totalIncome: number;
-  totalExpenses: number;
-  netSavings: number;
-  savingsRate: number;
-  transactionCount: number;
-  activeGoalsCount: number;
+  readonly totalIncome: number;
+  readonly totalExpenses: number;
+  readonly netSavings: number;
+  readonly savingsRate: number;
+  readonly transactionCount: number;
+  readonly activeGoalsCount: number;
 }
 
 interface RecentTransactionItem {
-  id: string;
-  type: "income" | "expense";
-  amount: number;
-  category: string;
-  description: string;
-  date: string;
+  readonly id: string;
+  readonly type: "income" | "expense";
+  readonly amount: number;
+  readonly category: string;
+  readonly description: string;
+  readonly date: string;
+}
+
+interface IMongoRecentTransaction {
+  readonly _id: unknown;
+  readonly type?: string;
+  readonly amount?: number;
+  readonly category?: string;
+  readonly description?: string;
+  readonly title?: string;
+  readonly date?: Date | string;
 }
 
 // ============================================================================
@@ -64,8 +75,8 @@ interface RecentTransactionItem {
  * Ensures strict multi-tenant isolation by filtering queries exclusively on userId.
  */
 async function fetchUserDashboardMetrics(userId: string): Promise<{
-  metrics: FinancialMetrics;
-  recentTransactions: RecentTransactionItem[];
+  readonly metrics: FinancialMetrics;
+  readonly recentTransactions: readonly RecentTransactionItem[];
 }> {
   try {
     await dbConnect();
@@ -95,12 +106,14 @@ async function fetchUserDashboardMetrics(userId: string): Promise<{
     const savingsRate =
       totalIncome > 0 ? Math.max(0, Number(((netSavings / totalIncome) * 100).toFixed(1))) : 0;
 
-    const recentTransactions: RecentTransactionItem[] = recentDocs.map((doc: any) => ({
+    const typedRecentDocs = recentDocs as unknown as readonly IMongoRecentTransaction[];
+
+    const recentTransactions: readonly RecentTransactionItem[] = typedRecentDocs.map((doc) => ({
       id: String(doc._id),
       type: doc.type === "income" ? "income" : "expense",
       amount: Number(doc.amount || 0),
       category: String(doc.category || "General"),
-      description: String(doc.description || "Transaction"),
+      description: String(doc.description || doc.title || "Transaction"),
       date: doc.date ? new Date(doc.date).toISOString().split("T")[0] : "Recent",
     }));
 
@@ -115,8 +128,9 @@ async function fetchUserDashboardMetrics(userId: string): Promise<{
       },
       recentTransactions,
     };
-  } catch (error) {
-    console.error("[DashboardData] Error aggregating financial metrics:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[DashboardData] Error aggregating financial metrics:", errorMessage);
     return {
       metrics: {
         totalIncome: 0,
@@ -143,12 +157,12 @@ function MetricCard({
   icon: Icon,
   accentColor,
 }: {
-  title: string;
-  amount: number | string;
-  isCurrency?: boolean;
-  subtitle: string;
-  icon: React.ElementType;
-  accentColor: string;
+  readonly title: string;
+  readonly amount: number | string;
+  readonly isCurrency?: boolean;
+  readonly subtitle: string;
+  readonly icon: React.ElementType;
+  readonly accentColor: string;
 }) {
   const formattedValue =
     isCurrency && typeof amount === "number"
@@ -180,10 +194,39 @@ function MetricCard({
 }
 
 // ============================================================================
+// LOADING SKELETON FALLBACK COMPONENT
+// ============================================================================
+
+function DashboardSkeleton(): React.ReactElement {
+  return (
+    <main className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 sm:p-8 lg:p-12 space-y-8 max-w-7xl mx-auto animate-pulse">
+      <div className="flex items-center justify-between pb-6 border-b border-white/10">
+        <div className="space-y-2">
+          <div className="h-4 w-32 bg-white/10 rounded-full" />
+          <div className="h-8 w-64 bg-white/10 rounded-2xl" />
+        </div>
+        <div className="h-12 w-44 bg-white/10 rounded-2xl" />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={`skeleton-card-${i}`} className="h-36 bg-white/5 rounded-3xl border border-white/10" />
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 h-96 bg-white/5 rounded-3xl border border-white/10" />
+        <div className="h-96 bg-white/5 rounded-3xl border border-white/10" />
+      </div>
+    </main>
+  );
+}
+
+// ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
 
-export default async function DashboardPage() {
+export default async function DashboardPage(): Promise<React.ReactElement> {
   let user: SessionUser;
 
   try {
@@ -195,13 +238,7 @@ export default async function DashboardPage() {
   const { metrics, recentTransactions } = await fetchUserDashboardMetrics(user.id);
 
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen p-6 sm:p-10 flex items-center justify-center text-xs font-black uppercase tracking-widest opacity-60">
-          Syncing Financial Core...
-        </div>
-      }
-    >
+    <Suspense fallback={<DashboardSkeleton />}>
       <main className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] p-4 sm:p-8 lg:p-12 space-y-8 max-w-7xl mx-auto">
         {/* Header Navigation Section */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10">

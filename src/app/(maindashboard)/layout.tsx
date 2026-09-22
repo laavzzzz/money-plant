@@ -5,7 +5,8 @@
  * Defines semantic shell landmarks, responsive tracking matrices, structural navigation layouts,
  * and isolated low-overhead client sub-components with WCAG 2.1 AA compliance.
  *
- * @version 3.6.0
+ * @version 4.0.0
+ * @author Senior Principal Full-Stack Architecture Team
  */
 
 "use client";
@@ -15,6 +16,7 @@ import Sidebar from "@/components/navigation/Sidebar";
 import MobileNav from "@/components/navigation/MobileNav";
 import { Bell, Search, Leaf } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 // ============================================================================
@@ -31,10 +33,11 @@ export interface DashboardGroupLayoutProps {
 
 /**
  * Isolated Asset Search Bar Component
- * Encapsulates input field mutations to eliminate global layout container cascading re-renders.
+ * Encapsulates input field mutations and routes queries to the transactions ledger.
  */
 const DashboardSearchBar = memo(function DashboardSearchBar() {
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
   const handleSearchSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -42,9 +45,10 @@ const DashboardSearchBar = memo(function DashboardSearchBar() {
       const query = searchQuery.trim();
       if (!query) return;
 
-      toast.info(`Searching asset directory for: "${query}"`);
+      toast.info(`Filtering assets for: "${query}"`);
+      router.push(`/transactions?search=${encodeURIComponent(query)}`);
     },
-    [searchQuery]
+    [searchQuery, router]
   );
 
   const handleInputChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +124,7 @@ NotificationTriggerButton.displayName = "NotificationTriggerButton";
  * DashboardGroupLayout Framework Shell Component
  * Serves as the primary layout wrapper for all main dashboard routes in MoneyPlant.
  */
-export default function DashboardGroupLayout({ children }: DashboardGroupLayoutProps) {
+export default function DashboardGroupLayout({ children }: DashboardGroupLayoutProps): React.ReactElement {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#FAFAFC] dark:bg-[#0B0B0D] relative overflow-hidden transition-colors duration-500">
       {/* Accessibility Skip Link */}
