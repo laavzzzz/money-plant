@@ -42,7 +42,7 @@ const plusJakarta = Plus_Jakarta_Sans({
  * Base URL resolution ensuring safe fallbacks for Vercel preview deployments
  * and local development environments.
  */
-const SERVER_ENV_URL = process.env.NEXT_PUBLIC_APP_URL || "https://moneyplant.dev";
+const SERVER_ENV_URL = process.env.NEXT_PUBLIC_APP_URL || "https://money-plant-pearl.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SERVER_ENV_URL),
