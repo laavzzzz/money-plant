@@ -94,6 +94,7 @@ export type AuthAction =
   | { type: "TOGGLE_SHOW_PASSWORD" }
   | { type: "SET_OTP_INDEX"; payload: { index: number; value: string } }
   | { type: "TOGGLE_MODE" }
+  | { type: "SWITCH_TO_LOGIN" }
   | { type: "SET_STEP"; payload: AuthStep }
   | { type: "SET_GOOGLE_LOADING"; payload: boolean }
   | { type: "SET_SUBMITTING"; payload: boolean }
@@ -161,6 +162,15 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
       return {
         ...INITIAL_STATE,
         mode: state.mode === "login" ? "signup" : "login",
+      };
+    case "SWITCH_TO_LOGIN":
+      return {
+        ...state,
+        mode: "login",
+        step: "credentials",
+        fields: { ...state.fields, name: "", otp: Array(OTP_LENGTH).fill("") },
+        error: null,
+        success: "This email already has an account. Sign in below.",
       };
     case "SET_STEP":
       return { ...state, step: action.payload, error: null, success: null };
@@ -273,7 +283,11 @@ async function executeRegistration(payload: { name: string; email: string; passw
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Account registration failed."));
+    const error = new Error(getErrorMessage(data, "Account registration failed.")) as Error & {
+      code?: string;
+    };
+    error.code = data?.error?.code;
+    throw error;
   }
 }
 
@@ -710,6 +724,14 @@ function LoginFormInner() {
         }
       } catch (err: unknown) {
         AuthLogger.error("Authentication Exception Encountered", err);
+        if (
+          mode === "signup" &&
+          err instanceof Error &&
+          (err as Error & { code?: string }).code === "USER_ALREADY_EXISTS"
+        ) {
+          dispatch({ type: "SWITCH_TO_LOGIN" });
+          return;
+        }
         const message = err instanceof Error ? err.message : "Internal runtime failure.";
         dispatch({ type: "SET_ERROR", payload: message });
       } finally {
