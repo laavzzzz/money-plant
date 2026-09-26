@@ -31,22 +31,22 @@ function getEmailDeliveryMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();
 
-  if (normalized.includes("onboarding@resend.dev")) {
-    return "Resend's onboarding sender can only deliver to the email address used for your Resend account. Verify a sending domain in Resend and set EMAIL_FROM to that domain.";
+  if (normalized.includes("sender") || normalized.includes("from")) {
+    return "The email provider rejected the configured sender. Verify EMAIL_FROM_ADDRESS in Brevo and use that exact sender address.";
   }
 
   if (
     normalized.includes("domain") &&
     (normalized.includes("verify") || normalized.includes("not verified"))
   ) {
-    return "The EMAIL_FROM domain is not verified in Resend. Verify the domain or use a verified sender address.";
+    return "The sender domain is not verified in Brevo. Verify the domain or sender address before sending.";
   }
 
   if (normalized.includes("api key") || normalized.includes("unauthorized")) {
-    return "The Resend API key is missing, invalid, or unavailable in the deployed environment.";
+    return "The Brevo SMTP credentials are missing, invalid, or unavailable in the deployed environment.";
   }
 
-  return "Resend rejected the verification email. Check RESEND_API_KEY and EMAIL_FROM in the deployment environment.";
+  return "The verification email could not be sent. Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM_ADDRESS in the deployment environment.";
 }
 
 // ============================================================================

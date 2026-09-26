@@ -250,8 +250,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     // 1. Validate Critical System Dependencies
-    if (!process.env.RESEND_API_KEY) {
-      AuditLogger.log("ERROR", "Missing critical RESEND_API_KEY environment variable", {
+    if (
+      !process.env.SMTP_HOST ||
+      !process.env.SMTP_USER ||
+      !process.env.SMTP_PASS ||
+      !(process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_FROM)
+    ) {
+      AuditLogger.log("ERROR", "Missing critical SMTP email environment variables", {
         requestId,
         action: "CRITICAL_ENV_MISSING",
       });

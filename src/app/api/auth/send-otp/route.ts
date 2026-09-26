@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       expiresAt,
     });
 
-    // 7. Dispatch Email via Resend
+    // 7. Dispatch email via the configured Brevo transport
     if (context === "FORGOT_PASSWORD") {
       const { sendResetOTP } = await import("@/lib/email");
       await sendResetOTP(normalizedEmail, rawOTP);

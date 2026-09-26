@@ -1,38 +1,30 @@
 import { NextResponse } from "next/server";
-import { resend } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // HARD ERROR TEST: Verifies the environment variable exists
-    if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json({ error: "RESEND_API_KEY is not set in your environment variables!" }, { status: 500 });
+    const recipient =
+      process.env.TEST_EMAIL_RECIPIENT ||
+      process.env.EMAIL_FROM_ADDRESS ||
+      process.env.EMAIL_FROM;
+    if (!recipient) {
+      return NextResponse.json(
+        { success: false, error: "TEST_EMAIL_RECIPIENT or EMAIL_FROM_ADDRESS must be configured." },
+        { status: 500 }
+      );
     }
 
-    if (!resend) {
-      return NextResponse.json({ success: false, error: "Resend email client is not configured." }, { status: 500 });
-    }
-
-    console.log("Attempting direct test mail dispatch...");
-
-    // DIRECT DISPATCH BYPASSING DATABASE VALIDATIONS
-    // IMPORTANT: Swap the 'to' field with the exact email address you used to register your Resend account!
-    const { data, error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: "laveezazafar1910@gmail.com",
+    const data = await sendEmail({
+      to: recipient.replace(/^.*<([^>]+)>$/, "$1"),
       subject: "MoneyPlant Direct Carrier Test 🛠️",
-      html: "<p>If you see this, your Resend API configurations are 100% correct!</p>",
+      html: "<p>SMTP email delivery is configured correctly.</p>",
     });
-
-    if (error) {
-      console.error("Resend Core Error:", error);
-      return NextResponse.json({ success: false, error }, { status: 400 });
-    }
 
     return NextResponse.json({ 
       success: true, 
-      message: "The raw API key works perfectly!", 
+      message: "SMTP email delivery works correctly.", 
       data 
     });
   } catch (err: any) {
