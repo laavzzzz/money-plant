@@ -270,19 +270,44 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
           "code" in dbError &&
           (dbError as { code: number }).code === 11000
         ) {
-          return createJsonResponse(
+          // Another request may have created the account between findOne and
+          // create. Re-read it and continue the same pending-account flow.
+          const concurrentUser = await User.findOne({ email }).select(
+            "_id isVerified provider"
+          );
+
+          if (
+            !concurrentUser ||
+            concurrentUser.isVerified ||
+            concurrentUser.provider === "google"
+          ) {
+            return createJsonResponse(
+              {
+                success: false,
+                message: "An account with this email address already exists.",
+                error: {
+                  code: "USER_ALREADY_EXISTS",
+                  message: "An account with this email address already exists.",
+                },
+              },
+              409
+            );
+          }
+
+          newUser = await User.findByIdAndUpdate(
+            concurrentUser._id,
             {
-              success: false,
-              message: "This email was just registered. Please submit signup again to resend verification.",
-              error: {
-                code: "REGISTRATION_CONFLICT",
-                message: "This email was just registered. Please retry verification.",
+              $set: {
+                name,
+                password: hashedPassword,
+                provider: "credentials",
+                isVerified: false,
               },
             },
-            409
+            { new: true, runValidators: true }
           );
         }
-        throw dbError;
+        if (!newUser) throw dbError;
       }
     }
 
