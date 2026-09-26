@@ -227,12 +227,13 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
         {
           success: false,
           message: "An account with this email address already exists.",
+          data: { action: "SIGN_IN_REQUIRED" },
           error: {
             code: "USER_ALREADY_EXISTS",
             message: "An account with this email address already exists.",
           },
         },
-        409
+        200
       );
     }
 
@@ -285,12 +286,13 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
               {
                 success: false,
                 message: "An account with this email address already exists.",
+                data: { action: "SIGN_IN_REQUIRED" },
                 error: {
                   code: "USER_ALREADY_EXISTS",
                   message: "An account with this email address already exists.",
                 },
               },
-              409
+              200
             );
           }
 

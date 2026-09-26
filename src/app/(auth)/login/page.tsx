@@ -282,7 +282,7 @@ async function executeRegistration(payload: { name: string; email: string; passw
 
   const data = await response.json();
 
-  if (!response.ok) {
+  if (!response.ok || data?.error?.code === "USER_ALREADY_EXISTS") {
     const error = new Error(getErrorMessage(data, "Account registration failed.")) as Error & {
       code?: string;
     };
