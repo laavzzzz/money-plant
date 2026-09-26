@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { createWishlistItem, fetchWishlistItems } from "@/lib/data/wishlist";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month") ?? undefined;
     const { items, source } = await fetchWishlistItems(month ?? undefined);
@@ -20,6 +27,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       name,

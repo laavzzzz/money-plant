@@ -95,6 +95,7 @@ const GUEST_ONLY_ROUTES: readonly string[] = Object.freeze([
 
 /** Protected route mapping rule registry */
 const PROTECTED_RULES: readonly RouteRule[] = Object.freeze([
+  { path: "/api", requireVerification: true },
   { path: "/admin", roles: ["ADMIN", "SUPERADMIN"], requireVerification: true },
   { path: "/dashboard", requireVerification: true },
   { path: "/profile", requireVerification: true },

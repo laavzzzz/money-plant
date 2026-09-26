@@ -696,8 +696,17 @@ function LoginFormInner() {
           dispatch({ type: "SET_SUCCESS", payload: "Profile forged! Verification required." });
           dispatch({ type: "SET_STEP", payload: "otp" });
         } else {
-          AuthLogger.info("Executing initial credentials validation");
-          dispatch({ type: "SET_STEP", payload: "otp" });
+          AuthLogger.info("Executing credentials sign-in");
+          await executeCredentialsSignIn({
+            email,
+            password,
+            rememberMe,
+            redirect: false,
+          });
+
+          dispatch({ type: "SET_SUCCESS", payload: "Identity authorized. Redirecting..." });
+          router.push(searchParams.get("callbackUrl") || DEFAULT_REDIRECT_URL);
+          router.refresh();
         }
       } catch (err: unknown) {
         AuthLogger.error("Authentication Exception Encountered", err);
@@ -905,7 +914,7 @@ function LoginFormInner() {
                         <button
                           type="button"
                           disabled={isInteractionDisabled}
-                          onClick={() => dispatch({ type: "SET_FORGOT_PASSWORD_OPEN", payload: true })}
+                          onClick={() => router.push("/forgot-password")}
                           className="text-[10px] font-extrabold text-yellow-400 uppercase tracking-wider hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-yellow-400 rounded bg-transparent border-none disabled:opacity-40"
                         >
                           Forgot Password?
@@ -999,70 +1008,6 @@ function LoginFormInner() {
           </footer>
         )}
       </motion.div>
-
-      {/* Forgot Password Modal Overlay */}
-      <AnimatePresence>
-        {state.isForgotPasswordOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[var(--glass-bg)] border border-white/10 rounded-[32px] p-6 sm:p-8 w-full max-w-md shadow-2xl relative"
-            >
-              <button
-                type="button"
-                onClick={() => dispatch({ type: "SET_FORGOT_PASSWORD_OPEN", payload: false })}
-                className="absolute top-6 right-6 text-[var(--text-light)] hover:text-[var(--text-main)] transition-colors p-1"
-                aria-label="Close recovery modal"
-              >
-                <X size={20} />
-              </button>
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-yellow-400/10 rounded-2xl flex items-center justify-center text-yellow-400 border border-yellow-400/20">
-                  <KeyRound size={20} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black uppercase italic text-[var(--text-main)]">
-                    Password Reset
-                  </h2>
-                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-[var(--text-light)]">
-                    Identity Recovery Matrix
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
-                <InputField
-                  id={forgotEmailInputId}
-                  label="Registered Email Address"
-                  type="email"
-                  value={state.forgotPasswordEmail}
-                  placeholder="name@domain.io"
-                  disabled={state.isForgotPasswordSubmitting}
-                  icon={<AtSign size={16} />}
-                  onChange={(e) => dispatch({ type: "SET_FORGOT_PASSWORD_EMAIL", payload: e.target.value })}
-                />
-
-                <FormAlert id="forgot-alert" error={state.error} success={state.success} />
-
-                <button
-                  type="submit"
-                  disabled={state.isForgotPasswordSubmitting}
-                  className="w-full bg-yellow-400 text-black py-3.5 px-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-yellow-300 transition-all flex items-center justify-center gap-2 disabled:opacity-40"
-                >
-                  {state.isForgotPasswordSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Dispatch Reset Instructions"
-                  )}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Compliance Indicator Footer */}
       <footer role="note" className="mt-8 flex items-center gap-2 opacity-30 select-none pointer-events-none">

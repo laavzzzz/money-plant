@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSession } from "next-auth/react";
 
 /* 📦 TYPES */
 export interface Transaction {
@@ -22,6 +23,7 @@ interface ApiResponse {
 
 /* 🧠 HOOK */
 export function useTransactions() {
+  const { status } = useSession();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -31,6 +33,13 @@ export function useTransactions() {
 
   /* 🔄 FETCH FUNCTION */
   const fetchTransactions = useCallback(async () => {
+    if (status !== "authenticated") {
+      setTransactions([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       abortRef.current?.abort(); // cancel previous
       const controller = new AbortController();
@@ -67,7 +76,7 @@ export function useTransactions() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status]);
 
   /* 🚀 INITIAL FETCH */
   useEffect(() => {

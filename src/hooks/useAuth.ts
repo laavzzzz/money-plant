@@ -1,46 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 
 export interface User {
   id: string;
   name: string;
   email: string;
+  image?: string | null;
+  role?: string;
+  isVerified?: boolean;
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
 
-  // 🔄 simulate fetching user
-  useEffect(() => {
-    setTimeout(() => {
-      setUser({
-        id: "1",
-        name: "Ananya",
-        email: "ananya@mail.com",
-      });
-      setLoading(false);
-    }, 800);
-  }, []);
+  const user = session?.user
+    ? {
+        id: session.user.id,
+        name: session.user.name || "MoneyPlant User",
+        email: session.user.email || "",
+        image: session.user.image,
+        role: session.user.role,
+        isVerified: session.user.isVerified,
+      }
+    : null;
 
-  const login = async () => {
-    // 👉 replace with real auth later
-    setUser({
-      id: "1",
-      name: "Ananya",
-      email: "ananya@mail.com",
-    });
-  };
-
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    await signOut({ callbackUrl: "/login" });
   };
 
   return {
     user,
-    loading,
-    login,
+    loading: status === "loading",
+    isAuthenticated: status === "authenticated",
     logout,
   };
 }

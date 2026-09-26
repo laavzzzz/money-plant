@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { tryMongoConnect } from "@/lib/data/mongo";
 import { Goal } from "@/models/Goal";
 import {
@@ -28,6 +30,11 @@ const MOCK_GOALS: StoreGoal[] = [
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
     const mongoOk = await tryMongoConnect();
     if (mongoOk) {
       const goals = await Goal.find({}).lean();
@@ -49,6 +56,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { title, target, saved, emoji } = body;
 

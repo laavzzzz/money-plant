@@ -695,8 +695,17 @@ export default function LoginForm() {
           dispatch({ type: "SET_SUCCESS", payload: "Profile forged! Verification required." });
           dispatch({ type: "SET_STEP", payload: "otp" });
         } else {
-          AuthLogger.info("Executing initial credentials validation");
-          dispatch({ type: "SET_STEP", payload: "otp" });
+          AuthLogger.info("Executing credentials sign-in");
+          await executeCredentialsSignIn({
+            email,
+            password,
+            rememberMe,
+            redirect: false,
+          });
+
+          dispatch({ type: "SET_SUCCESS", payload: "Identity authorized. Redirecting..." });
+          router.push(searchParams.get("callbackUrl") || DEFAULT_REDIRECT_URL);
+          router.refresh();
         }
       } catch (err: unknown) {
         AuthLogger.error("Authentication Exception Encountered", err);

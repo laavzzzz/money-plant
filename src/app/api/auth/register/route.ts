@@ -268,7 +268,31 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     } catch (emailError) {
       await User.deleteOne({ _id: newUser._id });
       await VerificationToken.deleteMany({ email, type: "VERIFY_EMAIL" });
-      throw emailError;
+
+      const emailMessage =
+        emailError instanceof Error ? emailError.message : "Email delivery failed.";
+      Logger.error("AUTH_REGISTER_EMAIL_FAILURE", {
+        correlationId,
+        email: email.replace(/(^.).*(@.*$)/, "$1***$2"),
+        error: emailMessage,
+      });
+
+      return createJsonResponse(
+        {
+          success: false,
+          message:
+            "We could not send the verification email. Check your email provider settings and try again.",
+          error: {
+            code: "EMAIL_DELIVERY_FAILED",
+            message:
+              IS_DEV
+                ? emailMessage
+                : "Verification email delivery failed. Please try again later.",
+            correlationId,
+          },
+        },
+        502
+      );
     }
 
     Logger.info("AUTH_REGISTER_SUCCESS", {
