@@ -10,16 +10,15 @@ export async function GET() {
       message: "MongoDB Connected Successfully",
     });
   } catch (err) {
-    console.error("FULL ERROR:", err);
+    console.error("MongoDB connectivity check failed:", err);
 
     return NextResponse.json(
       {
         success: false,
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : null,
-        name: err instanceof Error ? err.name : null,
+        message:
+          "Database unavailable. Confirm MongoDB Atlas Network Access and the deployed MONGODB_URI.",
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 }

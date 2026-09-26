@@ -29,6 +29,12 @@ if (!MONGODB_URI) {
   );
 }
 
+if (!MONGODB_URI.startsWith("mongodb://") && !MONGODB_URI.startsWith("mongodb+srv://")) {
+  throw new Error(
+    "Invalid MONGODB_URI: use a MongoDB connection string beginning with mongodb:// or mongodb+srv://."
+  );
+}
+
 /**
  * Internal logger abstraction providing structured logging without exposing
  * sensitive credentials or cluttering production console outputs.

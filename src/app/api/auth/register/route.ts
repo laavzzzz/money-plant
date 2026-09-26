@@ -152,13 +152,10 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
       error: {
         code: "DB_CONN_ERROR",
         message:
-          dbConnError instanceof Error
-            ? dbConnError.message
-            : String(dbConnError),
-        stack: dbConnError instanceof Error ? dbConnError.stack : undefined,
+          "Database unavailable. Confirm MongoDB Atlas Network Access and the deployed MONGODB_URI, then try again.",
       },
     },
-    { status: 500 }
+    { status: 503 }
   );
 }
 
