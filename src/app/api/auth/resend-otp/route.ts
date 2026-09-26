@@ -104,7 +104,10 @@ export async function POST(req: NextRequest) {
     return authJsonResponse(
       {
         success: false,
-        message: "An internal server error occurred while resending the verification code.",
+        message:
+          process.env.NODE_ENV === "development" && error instanceof Error
+            ? error.message
+            : "An internal server error occurred while resending the verification code.",
       },
       500
     );

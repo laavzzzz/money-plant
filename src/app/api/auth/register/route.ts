@@ -180,7 +180,9 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
         message: issue.message,
       }));
 
-      const primaryErrorMessage = formattedErrors[0]?.message || "Invalid registration input data.";
+      const primaryErrorMessage =
+        formattedErrors.map((detail) => detail.message).filter(Boolean).join(" ") ||
+        "Invalid registration input data.";
 
       return createJsonResponse(
         {
@@ -266,9 +268,6 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     try {
       await sendVerificationOTP(email, rawOTP);
     } catch (emailError) {
-      await User.deleteOne({ _id: newUser._id });
-      await VerificationToken.deleteMany({ email, type: "VERIFY_EMAIL" });
-
       const emailMessage =
         emailError instanceof Error ? emailError.message : "Email delivery failed.";
       Logger.error("AUTH_REGISTER_EMAIL_FAILURE", {
@@ -281,7 +280,9 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
         {
           success: false,
           message:
-            "We could not send the verification email. Check your email provider settings and try again.",
+            IS_DEV
+              ? `Verification email could not be sent: ${emailMessage}`
+              : "We could not send the verification email. Check your email provider settings and try again.",
           error: {
             code: "EMAIL_DELIVERY_FAILED",
             message:

@@ -16,6 +16,11 @@ export const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND
 // Fallback to Resend onboarding email ONLY for strict local development sandbox usage.
 const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
 
+function getSenderAddress(sender: string): string {
+  const match = sender.match(/<([^>]+)>/);
+  return (match?.[1] || sender).trim().toLowerCase();
+}
+
 /**
  * Validates the Resend API payload and throws explicit errors if the dispatch fails.
  */
@@ -32,7 +37,7 @@ async function sendSecureEmail(payload: { from: string; to: string; subject: str
       console.error("❌ [Resend API Error]:", error);
 
       // Provide actionable feedback for the common testing domain constraint
-      if (payload.from === "onboarding@resend.dev") {
+      if (getSenderAddress(payload.from) === "onboarding@resend.dev") {
         console.warn(
           "⚠️ DEVELOPER NOTE: 'onboarding@resend.dev' can ONLY send emails to the primary email account used to register your Resend developer dashboard. Testing with secondary accounts will fail."
         );
