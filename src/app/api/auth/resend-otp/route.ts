@@ -13,6 +13,28 @@ export const dynamic = "force-dynamic";
 const OTP_EXPIRATION_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 60;
 
+function getEmailDeliveryMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("onboarding@resend.dev")) {
+    return "Resend's onboarding sender can only deliver to the email address used for your Resend account. Verify a sending domain in Resend and set EMAIL_FROM to that domain.";
+  }
+
+  if (
+    normalized.includes("domain") &&
+    (normalized.includes("verify") || normalized.includes("not verified"))
+  ) {
+    return "The EMAIL_FROM domain is not verified in Resend. Verify the domain or use a verified sender address.";
+  }
+
+  if (normalized.includes("api key") || normalized.includes("unauthorized")) {
+    return "The Resend API key is missing, invalid, or unavailable in the deployed environment.";
+  }
+
+  return "Resend rejected the verification email. Check RESEND_API_KEY and EMAIL_FROM in the deployment environment.";
+}
+
 export async function POST(req: NextRequest) {
   try {
     let body: unknown;
@@ -105,9 +127,11 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         message:
-          process.env.NODE_ENV === "development" && error instanceof Error
-            ? error.message
-            : "An internal server error occurred while resending the verification code.",
+          process.env.NODE_ENV === "development"
+            ? error instanceof Error
+              ? error.message
+              : "Email delivery failed."
+            : getEmailDeliveryMessage(error),
       },
       500
     );

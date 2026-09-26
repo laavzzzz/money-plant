@@ -27,6 +27,28 @@ export const dynamic = "force-dynamic";
 const BCRYPT_SALT_ROUNDS = 12;
 const IS_DEV = process.env.NODE_ENV === "development";
 
+function getEmailDeliveryMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("onboarding@resend.dev")) {
+    return "Resend's onboarding sender can only deliver to the email address used for your Resend account. Verify a sending domain in Resend and set EMAIL_FROM to that domain.";
+  }
+
+  if (
+    normalized.includes("domain") &&
+    (normalized.includes("verify") || normalized.includes("not verified"))
+  ) {
+    return "The EMAIL_FROM domain is not verified in Resend. Verify the domain or use a verified sender address.";
+  }
+
+  if (normalized.includes("api key") || normalized.includes("unauthorized")) {
+    return "The Resend API key is missing, invalid, or unavailable in the deployed environment.";
+  }
+
+  return "Resend rejected the verification email. Check RESEND_API_KEY and EMAIL_FROM in the deployment environment.";
+}
+
 // ============================================================================
 // RESPONSE & ERROR SCHEMAS / TYPES
 // ============================================================================
@@ -200,9 +222,10 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
 
     const { name, email, password } = validationResult.data;
 
-    // 4. Duplicate Check (Optimized query targeting indexed email field)
-    const existingUser = await User.findOne({ email }).select("_id").lean();
-    if (existingUser) {
+    // 4. Reuse an unverified credentials account so a failed email delivery
+    // can be retried from the signup form without creating duplicate users.
+    const existingUser = await User.findOne({ email }).select("_id isVerified provider");
+    if (existingUser?.isVerified || existingUser?.provider === "google") {
       return createJsonResponse(
         {
           success: false,
@@ -219,37 +242,55 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     // 5. Password Hashing
     const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
-    // 6. User Creation with MongoDB Duplicate Key Safeguard
+    // 6. Create or refresh the pending credentials account.
     let newUser;
-    try {
-      newUser = await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        provider: "credentials",
-        isVerified: false,
-      });
-    } catch (dbError: unknown) {
-      // Handle MongoDB duplicate key error code (11000) for edge-case race conditions
-      if (
-        typeof dbError === "object" &&
-        dbError !== null &&
-        "code" in dbError &&
-        (dbError as { code: number }).code === 11000
-      ) {
-        return createJsonResponse(
-          {
-            success: false,
-            message: "An account with this email address already exists.",
-            error: {
-              code: "USER_ALREADY_EXISTS",
-              message: "An account with this email address already exists.",
-            },
+    if (existingUser) {
+      newUser = await User.findByIdAndUpdate(
+        existingUser._id,
+        {
+          $set: {
+            name,
+            password: hashedPassword,
+            provider: "credentials",
+            isVerified: false,
           },
-          409
-        );
+        },
+        { new: true, runValidators: true }
+      );
+    } else {
+      try {
+        newUser = await User.create({
+          name,
+          email,
+          password: hashedPassword,
+          provider: "credentials",
+          isVerified: false,
+        });
+      } catch (dbError: unknown) {
+        if (
+          typeof dbError === "object" &&
+          dbError !== null &&
+          "code" in dbError &&
+          (dbError as { code: number }).code === 11000
+        ) {
+          return createJsonResponse(
+            {
+              success: false,
+              message: "This email was just registered. Please submit signup again to resend verification.",
+              error: {
+                code: "REGISTRATION_CONFLICT",
+                message: "This email was just registered. Please retry verification.",
+              },
+            },
+            409
+          );
+        }
+        throw dbError;
       }
-      throw dbError;
+    }
+
+    if (!newUser) {
+      throw new Error("Unable to create or update the pending user account.");
     }
 
     const rawOTP = generateOTP();
@@ -270,6 +311,7 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     } catch (emailError) {
       const emailMessage =
         emailError instanceof Error ? emailError.message : "Email delivery failed.";
+      const userFacingEmailMessage = getEmailDeliveryMessage(emailError);
       Logger.error("AUTH_REGISTER_EMAIL_FAILURE", {
         correlationId,
         email: email.replace(/(^.).*(@.*$)/, "$1***$2"),
@@ -280,15 +322,11 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
         {
           success: false,
           message:
-            IS_DEV
-              ? `Verification email could not be sent: ${emailMessage}`
-              : "We could not send the verification email. Check your email provider settings and try again.",
+            IS_DEV ? `Verification email could not be sent: ${emailMessage}` : userFacingEmailMessage,
           error: {
             code: "EMAIL_DELIVERY_FAILED",
             message:
-              IS_DEV
-                ? emailMessage
-                : "Verification email delivery failed. Please try again later.",
+              IS_DEV ? emailMessage : userFacingEmailMessage,
             correlationId,
           },
         },
