@@ -93,7 +93,10 @@ async function fetchUserDashboardMetrics(userId: string): Promise<{
           { $group: { _id: null, total: { $sum: "$amount" } } },
         ]),
         TransactionModel.countDocuments({ userId }),
-        GoalModel.countDocuments({ userId, status: "in_progress" }),
+        GoalModel.countDocuments({
+          userId,
+          $expr: { $lt: ["$currentAmount", "$targetAmount"] },
+        }),
         TransactionModel.find({ userId })
           .sort({ date: -1 })
           .limit(5)

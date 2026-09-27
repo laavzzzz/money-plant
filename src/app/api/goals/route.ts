@@ -1,102 +1,139 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import mongoose from "mongoose";
 import { authOptions } from "@/lib/auth";
-import { tryMongoConnect } from "@/lib/data/mongo";
+import dbConnect from "@/lib/dbConnect";
 import { Goal } from "@/models/Goal";
-import {
-  listLocalGoals,
-  addLocalGoal,
-  type StoreGoal,
-} from "@/lib/data/local-store";
 
 export const dynamic = "force-dynamic";
 
-const MOCK_GOALS: StoreGoal[] = [
-  {
-    _id: "goal-1",
-    title: "Europe Trip",
-    saved: 35000,
-    target: 100000,
-    emoji: "✈️",
-  },
-  {
-    _id: "goal-2",
-    title: "New Laptop",
-    saved: 45000,
-    target: 80000,
-    emoji: "💻",
-  },
-];
+function unauthorized() {
+  return NextResponse.json(
+    { success: false, message: "Unauthorized. Please sign in again." },
+    { status: 401 }
+  );
+}
+
+function serializeGoal(goal: {
+  _id: unknown;
+  title?: string;
+  targetAmount?: number;
+  currentAmount?: number;
+}) {
+  return {
+    _id: String(goal._id),
+    title: goal.title || "Financial goal",
+    target: Number(goal.targetAmount || 0),
+    saved: Number(goal.currentAmount || 0),
+    emoji: "🎯",
+  };
+}
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    const userId = session?.user?.id;
+
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return unauthorized();
     }
 
-    const mongoOk = await tryMongoConnect();
-    if (mongoOk) {
-      const goals = await Goal.find({}).lean();
-      if (goals.length > 0) {
-        return NextResponse.json({ success: true, data: goals, source: "mongodb" });
-      }
-    }
+    await dbConnect();
+    const goals = await Goal.find({ userId }).sort({ createdAt: -1 }).lean();
+
+    return NextResponse.json({
+      success: true,
+      data: goals.map(serializeGoal),
+      source: "mongodb",
+    });
   } catch (error) {
-    console.error("Goals GET mongo error:", error);
+    console.error("[GET /api/goals] Failed:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Goals are temporarily unavailable. Please try again.",
+      },
+      { status: 503 }
+    );
   }
-
-  const local = await listLocalGoals();
-  return NextResponse.json({
-    success: true,
-    data: local.length > 0 ? local : MOCK_GOALS,
-    source: "local",
-  });
 }
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    const userId = session?.user?.id;
+
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return unauthorized();
     }
 
-    const body = await req.json();
-    const { title, target, saved, emoji } = body;
-
-    if (!title || target === undefined) {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json(
-        { success: false, message: "title and target are required" },
+        { success: false, message: "Invalid JSON payload." },
         { status: 400 }
       );
     }
 
-    const mongoOk = await tryMongoConnect();
-    if (mongoOk) {
-      try {
-        const goal = await Goal.create(body);
-        return NextResponse.json(
-          { success: true, data: goal, source: "mongodb" },
-          { status: 201 }
-        );
-      } catch (error) {
-        console.error("Goals POST mongo error:", error);
-      }
+    if (typeof body !== "object" || body === null) {
+      return NextResponse.json(
+        { success: false, message: "A goal payload is required." },
+        { status: 400 }
+      );
     }
 
-    const goal = await addLocalGoal({
-      title: String(title),
-      target: Number(target),
-      saved: Number(saved ?? 0),
-      emoji: String(emoji ?? "🎯"),
+    const payload = body as {
+      title?: unknown;
+      target?: unknown;
+      saved?: unknown;
+    };
+    const title = typeof payload.title === "string" ? payload.title.trim() : "";
+    const target = Number(payload.target);
+    const saved = Number(payload.saved ?? 0);
+
+    if (!title || title.length > 50) {
+      return NextResponse.json(
+        { success: false, message: "Goal title must be between 1 and 50 characters." },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(target) || target <= 0 || target > 100000000) {
+      return NextResponse.json(
+        { success: false, message: "Goal target must be a valid positive amount." },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(saved) || saved < 0 || saved > target) {
+      return NextResponse.json(
+        { success: false, message: "Saved amount must be between zero and the target." },
+        { status: 400 }
+      );
+    }
+
+    await dbConnect();
+    const goal = await Goal.create({
+      userId: new mongoose.Types.ObjectId(userId),
+      title,
+      targetAmount: target,
+      currentAmount: saved,
     });
 
     return NextResponse.json(
-      { success: true, data: goal, source: "local" },
+      { success: true, data: serializeGoal(goal), source: "mongodb" },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Goals POST error:", error);
-    return NextResponse.json({ success: false }, { status: 500 });
+    console.error("[POST /api/goals] Failed:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Could not save the goal. Please try again.",
+      },
+      { status: 503 }
+    );
   }
 }
