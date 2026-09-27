@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { createWishlistItem, fetchWishlistItems } from "@/lib/data/wishlist";
 import { authOptions } from "@/lib/auth";
+import dbConnect from "@/lib/dbConnect";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,8 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month") ?? undefined;
-    const { items, source } = await fetchWishlistItems(month ?? undefined);
+    await dbConnect();
+    const { items, source } = await fetchWishlistItems(session.user.id, month ?? undefined);
     return NextResponse.json({ success: true, items, source });
   } catch (error) {
     console.error("GET Wishlist Error:", error);
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
       notes,
     } = body;
 
-    if (!name?.trim() || !categoryType || amount === undefined || !targetMonth) {
+    if (typeof name !== "string" || !name.trim() || typeof categoryType !== "string" || amount === undefined || !targetMonth) {
       return NextResponse.json(
         { success: false, message: "name, categoryType, amount, and targetMonth are required" },
         { status: 400 }
@@ -64,7 +66,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const { item, source } = await createWishlistItem({
+    await dbConnect();
+    const { item, source } = await createWishlistItem(session.user.id, {
       name: String(name).trim(),
       categoryType: String(categoryType),
       amount: parsedAmount,

@@ -12,16 +12,16 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const streak = await fetchStreak();
+    const streak = await fetchStreak(session.user.id);
     return NextResponse.json({ success: true, streak });
   } catch (error: unknown) {
     console.error("GET Streak Error:", error);
     return NextResponse.json(
       {
-        success: true,
-        streak: { userId: "demo-user", count: 0, lastActiveDate: null },
+        success: false,
+        message: "Streak data is temporarily unavailable.",
       },
-      { status: 200 }
+      { status: 503 }
     );
   }
 }
@@ -33,16 +33,16 @@ export async function POST() {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const streak = await bumpStreak();
+    const streak = await bumpStreak(session.user.id);
     return NextResponse.json({ success: true, streak });
   } catch (error: unknown) {
     console.error("POST Streak Error:", error);
     return NextResponse.json(
       {
-        success: true,
-        streak: { userId: "demo-user", count: 1, lastActiveDate: new Date().toISOString().slice(0, 10) },
+        success: false,
+        message: "Streak data is temporarily unavailable.",
       },
-      { status: 200 }
+      { status: 503 }
     );
   }
 }

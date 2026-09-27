@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { patchWishlistItem, removeWishlistItem } from "@/lib/data/wishlist";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import dbConnect from "@/lib/dbConnect";
 
 export const dynamic = "force-dynamic";
 
@@ -8,9 +11,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     const { id } = await params;
     const body = await req.json();
-    const { item, source } = await patchWishlistItem(id, body);
+    await dbConnect();
+    const { item, source } = await patchWishlistItem(session.user.id, id, body);
 
     if (!item) {
       return NextResponse.json(
@@ -34,8 +40,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     const { id } = await params;
-    const { success, source } = await removeWishlistItem(id);
+    await dbConnect();
+    const { success, source } = await removeWishlistItem(session.user.id, id);
 
     if (!success) {
       return NextResponse.json(

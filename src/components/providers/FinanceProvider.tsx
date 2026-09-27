@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { usePlant } from "@/hooks/usePlant";
 import { useStreak } from "@/hooks/useStreak";
@@ -22,6 +23,7 @@ const FinanceContext = createContext<FinanceContextValue | null>(null);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const {
     transactions,
     loading,
@@ -44,9 +46,18 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         expense,
         savings,
         plantStage ?? { name: "Seed", level: 1 },
-        status
+        status,
+        {
+          name: session?.user?.name || "MoneyPlant user",
+          email: session?.user?.email || "",
+          phone: "",
+          level: "MoneyPlant member",
+          aura: 0,
+          globalRank: null,
+          tagline: "Personal finance progress from your own activity.",
+        }
       ),
-    [transactions, pathname, streak, income, expense, savings, plantStage, status]
+    [transactions, pathname, streak, income, expense, savings, plantStage, status, session?.user?.name, session?.user?.email]
   );
 
   const value = useMemo(

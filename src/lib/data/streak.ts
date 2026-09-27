@@ -3,23 +3,21 @@ import { tryMongoConnect } from "@/lib/data/mongo";
 import { getLocalStreak, saveLocalStreak, type StoreStreak } from "@/lib/data/local-store";
 import { getToday, getYesterday } from "@/utils/dateHelpers";
 
-const DEMO_USER = "demo-user";
-
-export async function fetchStreak(): Promise<StoreStreak> {
+export async function fetchStreak(userId: string): Promise<StoreStreak> {
   const mongoOk = await tryMongoConnect();
 
   if (mongoOk) {
     try {
-      let streak = await Streak.findOne({ userId: DEMO_USER });
+      let streak = await Streak.findOne({ userId });
       if (!streak) {
         streak = await Streak.create({
-          userId: DEMO_USER,
+          userId,
           count: 0,
           lastActiveDate: null,
         });
       }
       return {
-        userId: DEMO_USER,
+        userId,
         count: streak.count,
         lastActiveDate: streak.lastActiveDate,
       };
@@ -31,23 +29,23 @@ export async function fetchStreak(): Promise<StoreStreak> {
   return getLocalStreak();
 }
 
-export async function bumpStreak(): Promise<StoreStreak> {
+export async function bumpStreak(userId: string): Promise<StoreStreak> {
   const mongoOk = await tryMongoConnect();
   const today = getToday();
   const yesterday = getYesterday();
 
   if (mongoOk) {
     try {
-      let streak = await Streak.findOne({ userId: DEMO_USER });
+      let streak = await Streak.findOne({ userId });
 
       if (!streak) {
         streak = await Streak.create({
-          userId: DEMO_USER,
+          userId,
           count: 1,
           lastActiveDate: today,
         });
         return {
-          userId: DEMO_USER,
+          userId,
           count: streak.count,
           lastActiveDate: streak.lastActiveDate,
         };
@@ -55,7 +53,7 @@ export async function bumpStreak(): Promise<StoreStreak> {
 
       if (streak.lastActiveDate === today) {
         return {
-          userId: DEMO_USER,
+          userId,
           count: streak.count,
           lastActiveDate: streak.lastActiveDate,
         };
@@ -70,7 +68,7 @@ export async function bumpStreak(): Promise<StoreStreak> {
       await streak.save();
 
       return {
-        userId: DEMO_USER,
+        userId,
         count: streak.count,
         lastActiveDate: streak.lastActiveDate,
       };
@@ -80,6 +78,7 @@ export async function bumpStreak(): Promise<StoreStreak> {
   }
 
   const streak = await getLocalStreak();
+  streak.userId = userId;
   if (streak.lastActiveDate === today) return streak;
 
   if (streak.lastActiveDate === yesterday) {

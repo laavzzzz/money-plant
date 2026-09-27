@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { tryMongoConnect } from "@/lib/data/mongo";
 import { User, IUser } from "@/models/User";
-import { getLocalProfile, saveLocalProfile } from "@/lib/data/profile-store";
 
 import { authOptions } from "@/lib/auth";
 
@@ -107,18 +106,9 @@ export async function GET() {
       );
     }
 
-    // Local Store Fallback scoped to user session
-    const localProfile = await getLocalProfile();
-    if (localProfile) {
-      return NextResponse.json(
-        { success: true, data: enrichProfileData(localProfile), source: "local" },
-        { status: 200 }
-      );
-    }
-
     return NextResponse.json(
-      { success: false, message: "User profile data unavailable." },
-      { status: 404 }
+      { success: false, message: "Profile service is temporarily unavailable." },
+      { status: 503 }
     );
   } catch (error) {
     console.error("Profile GET error:", error);
@@ -204,11 +194,9 @@ export async function PUT(req: Request) {
       );
     }
 
-    // Local storage persistence fallback
-    const savedLocal = await saveLocalProfile({ email: userEmail, ...updateData });
     return NextResponse.json(
-      { success: true, data: enrichProfileData(savedLocal), source: "local" },
-      { status: 200 }
+      { success: false, message: "Profile service is temporarily unavailable." },
+      { status: 503 }
     );
   } catch (error: any) {
     console.error("Profile PUT error:", error);

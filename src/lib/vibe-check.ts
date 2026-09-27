@@ -1,15 +1,5 @@
 import type { Transaction } from "@/hooks/useTransactions";
 
-export const DEMO_PROFILE = {
-  name: "Ananya Sharma",
-  level: "Level 12 Financial Sage",
-  email: "ananya@moneyplant.dev",
-  phone: "+91 98765 43210",
-  aura: 12450,
-  globalRank: 42,
-  tagline: "Grinding for that Sprout Stage 2",
-};
-
 export const APP_ROUTES = [
   { path: "/dashboard", label: "Dashboard", description: "Overview, plant, savings, charts, and quick actions" },
   { path: "/dashboard/accounts", label: "Accounts", description: "Linked accounts and account-level finance summary" },
@@ -24,7 +14,15 @@ export const APP_ROUTES = [
 
 export type FinanceSnapshot = {
   pathname: string;
-  profile: typeof DEMO_PROFILE;
+  profile: {
+    name: string;
+    email: string;
+    phone: string;
+    level: string;
+    aura: number;
+    globalRank: number | null;
+    tagline: string;
+  };
   income: number;
   expense: number;
   savings: number;
@@ -60,14 +58,15 @@ export function buildFinanceSnapshot(
   expense: number,
   savings: number,
   plantStage: { name: string; level?: number },
-  plantStatus: string
+  plantStatus: string,
+  profile: FinanceSnapshot["profile"]
 ): FinanceSnapshot {
   const categoryTotals = buildCategoryTotals(transactions);
   const safeToSpend = Math.max(0, income - expense);
 
   return {
     pathname,
-    profile: DEMO_PROFILE,
+    profile,
     income,
     expense,
     savings,
@@ -116,7 +115,7 @@ USER PROFILE:
 - Email: ${snapshot.profile.email}
 - Phone: ${snapshot.profile.phone}
 - Aura points: ${snapshot.profile.aura}
-- Global rank: #${snapshot.profile.globalRank}
+- Global rank: ${snapshot.profile.globalRank === null ? "Not available yet" : `#${snapshot.profile.globalRank}`}
 - Bio: ${snapshot.profile.tagline}
 
 CURRENT PAGE: ${currentRoute} (${snapshot.pathname})

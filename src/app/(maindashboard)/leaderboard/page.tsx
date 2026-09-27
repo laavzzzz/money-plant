@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useCallback, memo } from "react";
+import React, { useState, useMemo, useCallback, memo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles, Trophy, Users } from "lucide-react";
@@ -27,24 +27,6 @@ export interface LeaderRecord {
   emoji: string;
   isCurrentUser?: boolean;
 }
-
-// Structured mock telemetry stream matching API synchronization profiles
-const LEADERBOARD_REGISTRY: Record<LeaderboardPeriod, LeaderRecord[]> = {
-  month: [
-    { rank: 1, name: "MoneyMonk", aura: 34550, emoji: "🐒" },
-    { rank: 2, name: "SaverGirl", aura: 18450, emoji: "🌸" },
-    { rank: 3, name: "FrugalKing", aura: 15230, emoji: "👑" },
-    { rank: 4, name: "BudgetBoss", aura: 13400, emoji: "💼" },
-    { rank: 5, name: "SaveMaster", aura: 12450, emoji: "🧙" },
-  ],
-  all: [
-    { rank: 1, name: "WhaleSaver", aura: 894300, emoji: "🐋" },
-    { rank: 2, name: "MoneyMonk", aura: 542100, emoji: "🐒" },
-    { rank: 3, name: "CryptoGuru", aura: 412900, emoji: "🪙" },
-    { rank: 4, name: "SaverGirl", aura: 389400, emoji: "🌸" },
-    { rank: 5, name: "FrugalKing", aura: 310200, emoji: "👑" },
-  ],
-};
 
 const PERIOD_TABS = [
   { id: "month", label: "This Month" },
@@ -188,21 +170,50 @@ const LeaderboardRow = memo(function LeaderboardRow({ user, onSelect }: Leaderbo
 
 export default function LeaderboardPage() {
   const [activePeriod, setActivePeriod] = useState<LeaderboardPeriod>("month");
+  const [leaderboard, setLeaderboard] = useState<LeaderRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Retrieve data stream based on selected reactive time token context window
-  const activeDataset = useMemo(() => {
-    return LEADERBOARD_REGISTRY[activePeriod] || [];
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLeaderboard() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/leaderboard?period=${activePeriod}`, {
+          cache: "no-store",
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.message || "Unable to load leaderboard");
+        }
+        if (!cancelled) setLeaderboard(Array.isArray(payload.leaderboard) ? payload.leaderboard : []);
+      } catch (loadError) {
+        if (!cancelled) {
+          setLeaderboard([]);
+          setError(loadError instanceof Error ? loadError.message : "Unable to load leaderboard");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadLeaderboard();
+    return () => {
+      cancelled = true;
+    };
   }, [activePeriod]);
 
   // Safely extract top three entities using positional mapping logic arrays
   const topThree = useMemo(() => {
     return {
-      first: activeDataset.find(u => u.rank === 1),
-      second: activeDataset.find(u => u.rank === 2),
-      third: activeDataset.find(u => u.rank === 3),
+      first: leaderboard.find(u => u.rank === 1),
+      second: leaderboard.find(u => u.rank === 2),
+      third: leaderboard.find(u => u.rank === 3),
     };
-  }, [activeDataset]);
+  }, [leaderboard]);
 
   // Client Routing Core Logic Callbacks
   const handleProfileNavigation = useCallback((profileName?: string) => {
@@ -305,7 +316,11 @@ export default function LeaderboardPage() {
       {/* REGISTRY SCROLL SYSTEM COMPONENT BLOCK CONTAINER */}
       <main className="w-full min-h-[250px]">
         <AnimatePresence mode="popLayout">
-          {activeDataset.length === 0 ? (
+          {loading ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full py-16 text-center text-sm text-text-light">
+              Loading your leaderboard…
+            </motion.div>
+          ) : leaderboard.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -314,7 +329,7 @@ export default function LeaderboardPage() {
             >
               <span className="text-3xl mb-2" role="presentation">📊</span>
               <p className="text-sm font-bold text-text-main">No ledger telemetry processed</p>
-              <p className="text-xs text-text-light mt-1">Data stream is processing, re-check matrix configurations down-cycle.</p>
+              <p className="text-xs text-text-light mt-1">{error || "Leaderboard data will appear after your first tracked activity."}</p>
             </motion.div>
           ) : (
             <motion.ol 
@@ -322,7 +337,7 @@ export default function LeaderboardPage() {
               aria-label={`Leaderboard system flow container displaying ${activePeriod} parameters.`}
               className="space-y-3 max-w-2xl mx-auto sm:max-w-none w-full pl-0"
             >
-              {activeDataset.map((userRecord) => (
+              {leaderboard.map((userRecord) => (
                 <LeaderboardRow
                   key={`${activePeriod}-${userRecord.rank}-${userRecord.name}`}
                   user={userRecord}
