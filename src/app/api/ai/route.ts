@@ -11,7 +11,7 @@ export const maxDuration = 30;
 // CONSTANTS & CONFIGURATION
 // ============================================================================
 
-const GEMINI_MODEL = "gemini-3.5-flash";
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
 const GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_TIMEOUT_MS = 25000;
 const MAX_MESSAGES_COUNT = 50;
@@ -88,9 +88,9 @@ PERSONALITY & TONE:
 
 YOUR JOB:
 1. Answer questions about THIS user's profile, income, expenses, savings, categories, streak, and plant stage using ONLY the live data below.
-2. Help them navigate the app. When relevant, name exact page paths like "Open Transactions at /dashboard/transactions."
+2. Help them navigate the app. When relevant, name exact page paths like "Open Transactions at /transactions."
 3. Give actionable money advice based on their numbers (safe to spend, overspending categories, streak motivation).
-4. If they have no transactions, encourage logging their first entry at /dashboard/transactions.
+4. If they have no transactions, encourage logging their first entry at /transactions.
 
 RULES:
 - Never invent transactions, balances, or user metrics not in the data.
@@ -276,31 +276,40 @@ export async function POST(req: Request): Promise<Response> {
       req.signal.addEventListener("abort", () => controller.abort());
     }
 
-    // 5. Upstream Gemini API Execution
-    const upstreamUrl = `${GEMINI_API_BASE_URL}/${GEMINI_MODEL}:streamGenerateContent?alt=sse&key=${apiKey}`;
-    
-    const upstreamResponse = await fetch(upstreamUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(geminiPayload),
-      signal: controller.signal,
-    });
+    // 5. Upstream Gemini API Execution with model failover for transient
+    // capacity errors and retired/unsupported model names.
+    let upstreamResponse: Response | null = null;
+    let lastErrorText = "";
+
+    for (const model of GEMINI_MODELS) {
+      const upstreamUrl =
+        `${GEMINI_API_BASE_URL}/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+      upstreamResponse = await fetch(upstreamUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiPayload),
+        signal: controller.signal,
+      });
+
+      if (upstreamResponse.ok) break;
+
+      lastErrorText = await upstreamResponse.text();
+      if (![429, 500, 502, 503, 504].includes(upstreamResponse.status)) break;
+    }
 
     clearTimeout(timeoutId);
 
-    if (!upstreamResponse.ok) {
-      const errorText = await upstreamResponse.text();
-      console.error(`Upstream Gemini API error (${upstreamResponse.status}):`, errorText);
+    if (!upstreamResponse || !upstreamResponse.ok) {
+      const status = upstreamResponse?.status ?? 503;
+      console.error(`Upstream Gemini API error (${status}):`, lastErrorText);
 
       return Response.json(
         {
-          status: upstreamResponse.status,
-          error: errorText,
+          status,
+          error: "VibeCheck AI is temporarily unavailable. Please try again shortly.",
         },
         {
-          status: upstreamResponse.status,
+          status: status === 429 || status >= 500 ? 503 : status,
         }
       );
     }

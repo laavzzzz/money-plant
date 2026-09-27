@@ -23,24 +23,31 @@ function getTransporter() {
     host,
     port,
     secure: port === 465,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
     auth: { user, pass: password },
   });
 }
 
 function getSender(): string {
-  const address = process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_FROM;
+  const configuredSender = process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_FROM;
+  const address = configuredSender?.match(/<([^>]+)>/)?.[1] || configuredSender;
   if (!address) {
     throw new Error(
       "Email sender is missing. Set EMAIL_FROM_ADDRESS to a verified sender address."
     );
   }
 
-  const name = process.env.EMAIL_FROM_NAME || "MoneyPlant";
+  const name =
+    process.env.EMAIL_FROM_NAME ||
+    (configuredSender?.match(/^([^<]+)</)?.[1]?.trim() || "MoneyPlant");
   return `${name} <${address}>`;
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<void> {
-  await getTransporter().sendMail({
+  const transporter = getTransporter();
+  await transporter.sendMail({
     from: getSender(),
     to: payload.to,
     subject: payload.subject,

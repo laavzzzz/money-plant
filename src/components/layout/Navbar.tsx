@@ -9,7 +9,7 @@ export default function Navbar() {
         🌿 <span>MoneyPlant</span>
       </div>
       <div className="flex items-center gap-3 text-sm">
-        <Link href="/dashboard/profile">👤</Link>
+        <Link href="/profile">👤</Link>
       </div>
     </nav>
   );

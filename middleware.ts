@@ -286,6 +286,24 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
       return NextResponse.next();
     }
 
+    // Preserve compatibility with older client bundles that still request
+    // dashboard-prefixed page URLs. The actual App Router pages are top-level.
+    const legacyDashboardRoutes: Record<string, string> = {
+      "/dashboard/analytics": "/analytics",
+      "/dashboard/garden": "/garden",
+      "/dashboard/goals": "/goals",
+      "/dashboard/leaderboard": "/leaderboard",
+      "/dashboard/profile": "/profile",
+      "/dashboard/transactions": "/transactions",
+      "/dashboard/wishlist": "/wishlist",
+    };
+    const legacyTarget = legacyDashboardRoutes[normalizePathname(pathname)];
+    if (legacyTarget) {
+      const redirectUrl = new URL(legacyTarget, req.url);
+      searchParams.forEach((value, key) => redirectUrl.searchParams.set(key, value));
+      return NextResponse.redirect(redirectUrl);
+    }
+
     // 2. Secret Availability Guard
     if (!AUTH_SECRET) {
       logAuditEvent("ERROR", "Missing authentication secret in environment configuration", {

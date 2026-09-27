@@ -55,13 +55,13 @@ interface SidebarNavItemProps {
 
 const NAV_ITEMS: readonly NavItem[] = [
   { label: "Dashboard", icon: Home, href: "/dashboard", ariaLabel: "Navigate to Dashboard overview" },
-  { label: "Transactions", icon: ArrowLeftRight, href: "/dashboard/transactions", ariaLabel: "View all transactions" },
-  { label: "Analytics", icon: PieChart, href: "/dashboard/analytics", ariaLabel: "View financial analytics and reports" },
-  { label: "Goals", icon: Target, href: "/dashboard/goals", ariaLabel: "Manage savings goals" },
-  { label: "Garden", icon: Leaf, href: "/dashboard/garden", ariaLabel: "View gamified money plant garden" },
-  { label: "Dream Vault", icon: Heart, href: "/dashboard/wishlist", ariaLabel: "Access dream vault wishlist" },
-  { label: "Leaderboard", icon: Trophy, href: "/dashboard/leaderboard", ariaLabel: "Check global user leaderboards" },
-  { label: "Profile", icon: User, href: "/dashboard/profile", ariaLabel: "View and edit user profile settings" },
+  { label: "Transactions", icon: ArrowLeftRight, href: "/transactions", ariaLabel: "View all transactions" },
+  { label: "Analytics", icon: PieChart, href: "/analytics", ariaLabel: "View financial analytics and reports" },
+  { label: "Goals", icon: Target, href: "/goals", ariaLabel: "Manage savings goals" },
+  { label: "Garden", icon: Leaf, href: "/garden", ariaLabel: "View gamified money plant garden" },
+  { label: "Dream Vault", icon: Heart, href: "/wishlist", ariaLabel: "Access dream vault wishlist" },
+  { label: "Leaderboard", icon: Trophy, href: "/leaderboard", ariaLabel: "Check global user leaderboards" },
+  { label: "Profile", icon: User, href: "/profile", ariaLabel: "View and edit user profile settings" },
 ] as const;
 
 // ============================================================================

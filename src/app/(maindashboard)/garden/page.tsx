@@ -325,7 +325,7 @@ export default function GardenPage() {
             variant="primary"
             fullWidth
             leftIcon={<Target size={18} />}
-            onClick={() => handleNavigationRedirect("/dashboard/goals")}
+            onClick={() => handleNavigationRedirect("/goals")}
             aria-label="Navigate forward to configure system asset financial target vectors"
           >
             Set Goal

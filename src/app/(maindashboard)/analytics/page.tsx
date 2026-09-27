@@ -34,10 +34,10 @@ interface MetricDefinition {
  * Immutable Enterprise Analytics Configuration Directory
  */
 const ANALYTICS_METRICS_REGISTRY: readonly MetricDefinition[] = [
-  { id: "food", color: "bg-orange-400", label: "Food", percent: "35%", path: "/dashboard/transactions" },
-  { id: "transport", color: "bg-blue-400", label: "Transport", percent: "20%", path: "/dashboard/transactions" },
-  { id: "fun", color: "bg-pink-400", label: "Fun", percent: "25%", path: "/dashboard/transactions" },
-  { id: "other", color: "bg-green-400", label: "Other", percent: "20%", path: "/dashboard/transactions" },
+  { id: "food", color: "bg-orange-400", label: "Food", percent: "35%", path: "/transactions" },
+  { id: "transport", color: "bg-blue-400", label: "Transport", percent: "20%", path: "/transactions" },
+  { id: "fun", color: "bg-pink-400", label: "Fun", percent: "25%", path: "/transactions" },
+  { id: "other", color: "bg-green-400", label: "Other", percent: "20%", path: "/transactions" },
 ] as const;
 
 // ============================================================================
@@ -117,7 +117,7 @@ export default function AnalyticsPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => handleNavigationTransition("/dashboard/goals")}
+            onClick={() => handleNavigationTransition("/goals")}
             leftIcon={<Sparkles size={16} aria-hidden="true" />}
             aria-label="Navigate forward to configure system asset optimization targets"
           >
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
           <Button
             variant="vibe"
             size="sm"
-            onClick={() => handleNavigationTransition("/dashboard/transactions")}
+            onClick={() => handleNavigationTransition("/transactions")}
             leftIcon={<RefreshCcw size={16} aria-hidden="true" />}
             aria-label="Review historic ledger transaction statements log"
           >

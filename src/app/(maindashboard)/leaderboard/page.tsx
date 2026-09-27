@@ -207,13 +207,13 @@ export default function LeaderboardPage() {
   // Client Routing Core Logic Callbacks
   const handleProfileNavigation = useCallback((profileName?: string) => {
     const routeTarget = profileName 
-      ? `/dashboard/profile?user=${encodeURIComponent(profileName)}`
-      : "/dashboard/profile";
+      ? `/profile?user=${encodeURIComponent(profileName)}`
+      : "/profile";
     router.push(routeTarget);
   }, [router]);
 
   const handleTransactionNavigation = useCallback(() => {
-    router.push("/dashboard/transactions");
+    router.push("/transactions");
   }, [router]);
 
   return (

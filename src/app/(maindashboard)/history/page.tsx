@@ -337,7 +337,7 @@ export default function HistoryPage() {
   }, [processedTransactions]);
 
   const navigateToLoggingPortal = useCallback(() => {
-    router.push("/dashboard/transactions");
+    router.push("/transactions");
   }, [router]);
 
   return (

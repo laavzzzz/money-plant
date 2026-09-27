@@ -16,6 +16,7 @@ export interface Transaction {
 
 interface ApiResponse {
   success: boolean;
+  data?: Transaction[] | Transaction;
   transactions?: Transaction[];
   transaction?: Transaction;
   message?: string;
@@ -67,7 +68,10 @@ export function useTransactions() {
         throw new Error(data.message || `Server error: ${res.status}`);
       }
 
-      setTransactions(data.transactions ?? []);
+      const transactions = Array.isArray(data.data)
+        ? data.data
+        : data.transactions ?? [];
+      setTransactions(transactions);
     } catch (err: any) {
       if (err.name === "AbortError") return;
 
@@ -123,21 +127,26 @@ export function useTransactions() {
         throw new Error(`Server error ${res.status}: Could not process request.`);
       }
 
-      if (!res.ok || !data.success || !data.transaction) {
+      const transaction =
+        !Array.isArray(data.data) && data.data
+          ? data.data
+          : data.transaction;
+
+      if (!res.ok || !data.success || !transaction) {
         throw new Error(data.message || "Invalid response");
       }
 
       /* 🔄 replace temp with real */
       setTransactions((prev) =>
         prev.map((t) =>
-          t._id === tempId ? data.transaction! : t
+          t._id === tempId ? transaction : t
         )
       );
 
       /* 🔥 UPDATE STREAK (NON-BLOCKING) */
       fetch("/api/streak", { method: "POST" }).catch(() => {});
 
-      return data.transaction;
+      return transaction;
     } catch (err: any) {
       console.error("Add Error:", err);
       setError(err.message || "Failed to add transaction");

@@ -38,7 +38,7 @@ export default function QuickActions(): React.ReactElement {
       </button>
       <button
         type="button"
-        onClick={() => router.push("/dashboard/wishlist")}
+        onClick={() => router.push("/wishlist")}
         aria-label="View financial wishlist and goals"
         className="flex-1 bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 py-3 rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-yellow-200 dark:hover:bg-yellow-500/30 transition-colors active:scale-95 cursor-pointer shadow-sm"
       >

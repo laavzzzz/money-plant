@@ -203,7 +203,7 @@ export default function VibeCheck(): React.ReactElement {
                 type="button"
                 onClick={() =>
                   card.id === 2
-                    ? router.push("/dashboard/transactions")
+                    ? router.push("/transactions")
                     : openVibeCheck()
                 }
                 aria-label={`View details for ${card.title}`}

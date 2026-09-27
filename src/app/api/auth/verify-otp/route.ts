@@ -20,7 +20,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const { email, otp, context = "SIGNUP" } = body as { email: string, otp: string, context?: "SIGNUP" | "FORGOT_PASSWORD" };
+    const { email: rawEmail, otp, context = "SIGNUP" } = body as { email: string, otp: string, context?: "SIGNUP" | "FORGOT_PASSWORD" };
+    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
 
     if (!email || !otp) {
       return authJsonResponse({ success: false, message: "Email and OTP are required." }, 400);

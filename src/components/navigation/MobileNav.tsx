@@ -51,10 +51,10 @@ interface MobileNavItemProps {
 const NAV_ITEMS: readonly MobileNavItemConfig[] = [
   { label: "Home", icon: Home, href: "/dashboard", ariaLabel: "Navigate to Dashboard Home" },
   { label: "Accounts", icon: CreditCard, href: "/dashboard/accounts", ariaLabel: "View Connected Accounts" },
-  { label: "Transactions", icon: ArrowLeftRight, href: "/dashboard/transactions", ariaLabel: "View All Transactions" },
-  { label: "Goals", icon: Target, href: "/dashboard/goals", ariaLabel: "Manage Financial Goals" },
-  { label: "Garden", icon: Leaf, href: "/dashboard/garden", ariaLabel: "View Money Plant Garden" },
-  { label: "Profile", icon: User, href: "/dashboard/profile", ariaLabel: "View User Profile" },
+  { label: "Transactions", icon: ArrowLeftRight, href: "/transactions", ariaLabel: "View All Transactions" },
+  { label: "Goals", icon: Target, href: "/goals", ariaLabel: "Manage Financial Goals" },
+  { label: "Garden", icon: Leaf, href: "/garden", ariaLabel: "View Money Plant Garden" },
+  { label: "Profile", icon: User, href: "/profile", ariaLabel: "View User Profile" },
 ] as const;
 
 // ============================================================================

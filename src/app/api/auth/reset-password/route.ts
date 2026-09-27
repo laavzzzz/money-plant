@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const user = await User.findOne({ email: record.email });
+      const user = await User.findOne({ email: record.email.trim().toLowerCase() });
       if (!user) {
         await VerificationToken.deleteOne({ _id: record._id });
         return authJsonResponse(
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
       await VerificationToken.deleteOne({ _id: tokenRecord._id });
       return authJsonResponse(

@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const email = emailResult.data;
+    const email = emailResult.data.trim().toLowerCase();
 
     await dbConnect();
 

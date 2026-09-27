@@ -365,7 +365,7 @@ export default function GoalsPage() {
             </button>
             <button
               type="button"
-              onClick={() => dispatchNavigationTarget("/dashboard/wishlist")}
+              onClick={() => dispatchNavigationTarget("/wishlist")}
               className="inline-flex items-center gap-2 rounded-3xl border border-neutral-200 dark:border-white/10 bg-black/5 px-4 py-2.5 text-xs uppercase font-black tracking-[0.15em] text-text-main hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
             >
               Wishlist
@@ -403,7 +403,7 @@ export default function GoalsPage() {
         </button>
         <button
           type="button"
-          onClick={() => dispatchNavigationTarget("/dashboard/wishlist")}
+          onClick={() => dispatchNavigationTarget("/wishlist")}
           className="py-3 bg-primary/10 text-primary hover:bg-primary/15 border border-primary/10 rounded-2xl text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
         >
           View Wishlist Matrix
