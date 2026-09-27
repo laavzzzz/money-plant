@@ -218,6 +218,7 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     }
 
     const { name, email, password } = validationResult.data;
+    const normalizedEmail = (email || "").trim().toLowerCase();
 
     // 4. Hash the password before the atomic create/retry flow.
     const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
@@ -228,7 +229,7 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     try {
       newUser = await User.create({
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         provider: "credentials",
         isVerified: false,
@@ -245,7 +246,7 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
 
       // A real duplicate-key collision means another account already owns
       // this email. Reuse only an unverified credentials account.
-      const existingUser = await User.findOne({ email }).select(
+      const existingUser = await User.findOne({ email: normalizedEmail }).select(
         "_id isVerified provider"
       );
 
@@ -290,9 +291,9 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     const otpHash = await hashOTP(rawOTP);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    await VerificationToken.deleteMany({ email, type: "VERIFY_EMAIL" });
+    await VerificationToken.deleteMany({ email: normalizedEmail, type: "VERIFY_EMAIL" });
     await VerificationToken.create({
-      email,
+      email: normalizedEmail,
       type: "VERIFY_EMAIL",
       otpHash,
       expiresAt,
@@ -300,30 +301,41 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
     });
 
     try {
-      await sendVerificationOTP(email, rawOTP);
+      await sendVerificationOTP(normalizedEmail, rawOTP);
     } catch (emailError) {
       const emailMessage =
         emailError instanceof Error ? emailError.message : "Email delivery failed.";
       const userFacingEmailMessage = getEmailDeliveryMessage(emailError);
       Logger.error("AUTH_REGISTER_EMAIL_FAILURE", {
         correlationId,
-        email: email.replace(/(^.).*(@.*$)/, "$1***$2"),
+        email: normalizedEmail.replace(/(^.).*(@.*$)/, "$1***$2"),
         error: emailMessage,
       });
 
+      // Do NOT fail the entire registration if the mail transport fails. Return a success response
+      // indicating account creation but warn about delivery so client UI can surface next steps.
       return createJsonResponse(
         {
-          success: false,
-          message:
-            IS_DEV ? `Verification email could not be sent: ${emailMessage}` : userFacingEmailMessage,
+          success: true,
+          message: IS_DEV
+            ? `Account created but verification email could not be sent: ${emailMessage}`
+            : `Account created. Verification email could not be sent. Please verify your email settings or use the 'Resend verification' option.`,
+          data: {
+            user: {
+              id: newUser._id.toString(),
+              name: newUser.name,
+              email: newUser.email,
+            },
+            requiresVerification: true,
+            emailDeliveryFailed: true,
+          },
           error: {
             code: "EMAIL_DELIVERY_FAILED",
-            message:
-              IS_DEV ? emailMessage : userFacingEmailMessage,
+            message: IS_DEV ? emailMessage : userFacingEmailMessage,
             correlationId,
           },
         },
-        502
+        201
       );
     }
 

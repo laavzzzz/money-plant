@@ -261,11 +261,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         action: "CRITICAL_ENV_MISSING",
       });
 
-      await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
-      return NextResponse.json(
-        { error: "Internal authentication subsystem misconfiguration." },
-        { status: 500, headers: CONFIG.HTTP_HEADERS }
-      );
+      // Do not reveal internal configuration to callers. Return a generic success
+      // response to avoid user enumeration or breaking the UX; surface the issue in logs.
+      const totalDurationMs = await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      AuditLogger.log("WARN", "SMTP misconfigured; returning generic response to caller", {
+        requestId,
+        durationMs: totalDurationMs,
+      });
+
+      return NextResponse.json(GENERIC_SUCCESS_PAYLOAD, { status: 200, headers: CONFIG.HTTP_HEADERS });
     }
 
     // 2. Parse Incoming Payload Safely
@@ -426,14 +430,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         error: errorMessage,
       });
 
-      // Revoke orphan verification token to preserve database state consistency
-      await TokenOrchestratorService.revokeTokens(email);
+      // Preserve the verification token so the user can retry sending/resend later.
+      // Log and return a generic success payload to avoid leaking internal info or blocking UX.
+      const totalDurationMs = await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
+      AuditLogger.log("WARN", "Reset email delivery failed; token preserved for resend", {
+        requestId,
+        durationMs: totalDurationMs,
+      });
 
-      await TimingEqualizer.compensate(startTimeNs, CONFIG.TARGET_EXECUTION_TIME_MS);
-      return NextResponse.json(
-        { error: "Failed to dispatch reset email. Please try again later." },
-        { status: 500, headers: CONFIG.HTTP_HEADERS }
-      );
+      return NextResponse.json(GENERIC_SUCCESS_PAYLOAD, { status: 200, headers: CONFIG.HTTP_HEADERS });
     }
 
     // 9. Final Anti-Enumeration Timing Compensation
