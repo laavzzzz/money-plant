@@ -273,7 +273,13 @@ class AuthValidator {
 // API CLIENT DISPATCH SERVICE
 // ============================================================================
 
-async function executeRegistration(payload: { name: string; email: string; password: string }): Promise<void> {
+type RegistrationResult =
+  | { status: "created" }
+  | { status: "existing"; message: string };
+
+async function executeRegistration(
+  payload: { name: string; email: string; password: string }
+): Promise<RegistrationResult> {
   const response = await fetch(REGISTER_API_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -282,13 +288,18 @@ async function executeRegistration(payload: { name: string; email: string; passw
 
   const data = await response.json();
 
-  if (!response.ok || data?.error?.code === "USER_ALREADY_EXISTS") {
-    const error = new Error(getErrorMessage(data, "Account registration failed.")) as Error & {
-      code?: string;
+  if (response.status === 409 || data?.error?.code === "USER_ALREADY_EXISTS") {
+    return {
+      status: "existing",
+      message: getErrorMessage(data, "This email already has an account."),
     };
-    error.code = data?.error?.code;
-    throw error;
   }
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Account registration failed."));
+  }
+
+  return { status: "created" };
 }
 
 async function executeOtpVerification(payload: { email: string; otp: string }): Promise<void> {
@@ -705,7 +716,16 @@ function LoginFormInner() {
       try {
         if (mode === "signup") {
           AuthLogger.info("Executing registration API request");
-          await executeRegistration({ name: fields.name.trim(), email, password });
+          const registration = await executeRegistration({
+            name: fields.name.trim(),
+            email,
+            password,
+          });
+
+          if (registration.status === "existing") {
+            dispatch({ type: "SWITCH_TO_LOGIN" });
+            return;
+          }
           
           dispatch({ type: "SET_SUCCESS", payload: "Profile forged! Verification required." });
           dispatch({ type: "SET_STEP", payload: "otp" });
@@ -724,14 +744,6 @@ function LoginFormInner() {
         }
       } catch (err: unknown) {
         AuthLogger.error("Authentication Exception Encountered", err);
-        if (
-          mode === "signup" &&
-          err instanceof Error &&
-          (err as Error & { code?: string }).code === "USER_ALREADY_EXISTS"
-        ) {
-          dispatch({ type: "SWITCH_TO_LOGIN" });
-          return;
-        }
         const message = err instanceof Error ? err.message : "Internal runtime failure.";
         dispatch({ type: "SET_ERROR", payload: message });
       } finally {
