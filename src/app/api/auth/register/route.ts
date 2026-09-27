@@ -219,30 +219,55 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
 
     const { name, email, password } = validationResult.data;
 
-    // 4. Reuse an unverified credentials account so a failed email delivery
-    // can be retried from the signup form without creating duplicate users.
-    const existingUser = await User.findOne({ email }).select("_id isVerified provider");
-    if (existingUser?.isVerified || existingUser?.provider === "google") {
-      return createJsonResponse(
-        {
-          success: false,
-          message: "An account with this email address already exists.",
-          data: { action: "SIGN_IN_REQUIRED" },
-          error: {
-            code: "USER_ALREADY_EXISTS",
-            message: "An account with this email address already exists.",
-          },
-        },
-        200
-      );
-    }
-
-    // 5. Password Hashing
+    // 4. Hash the password before the atomic create/retry flow.
     const hashedPassword = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
-    // 6. Create or refresh the pending credentials account.
+    // 5. Create first. This guarantees a genuinely new email is never
+    // misclassified by a stale or inconsistent pre-read.
     let newUser;
-    if (existingUser) {
+    try {
+      newUser = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        provider: "credentials",
+        isVerified: false,
+      });
+    } catch (dbError: unknown) {
+      if (
+        typeof dbError !== "object" ||
+        dbError === null ||
+        !("code" in dbError) ||
+        (dbError as { code: number }).code !== 11000
+      ) {
+        throw dbError;
+      }
+
+      // A real duplicate-key collision means another account already owns
+      // this email. Reuse only an unverified credentials account.
+      const existingUser = await User.findOne({ email }).select(
+        "_id isVerified provider"
+      );
+
+      if (
+        !existingUser ||
+        existingUser.isVerified ||
+        existingUser.provider === "google"
+      ) {
+        return createJsonResponse(
+          {
+            success: false,
+            message: "An account with this email address already exists.",
+            data: { action: "SIGN_IN_REQUIRED" },
+            error: {
+              code: "USER_ALREADY_EXISTS",
+              message: "An account with this email address already exists.",
+            },
+          },
+          200
+        );
+      }
+
       newUser = await User.findByIdAndUpdate(
         existingUser._id,
         {
@@ -255,62 +280,6 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
         },
         { new: true, runValidators: true }
       );
-    } else {
-      try {
-        newUser = await User.create({
-          name,
-          email,
-          password: hashedPassword,
-          provider: "credentials",
-          isVerified: false,
-        });
-      } catch (dbError: unknown) {
-        if (
-          typeof dbError === "object" &&
-          dbError !== null &&
-          "code" in dbError &&
-          (dbError as { code: number }).code === 11000
-        ) {
-          // Another request may have created the account between findOne and
-          // create. Re-read it and continue the same pending-account flow.
-          const concurrentUser = await User.findOne({ email }).select(
-            "_id isVerified provider"
-          );
-
-          if (
-            !concurrentUser ||
-            concurrentUser.isVerified ||
-            concurrentUser.provider === "google"
-          ) {
-            return createJsonResponse(
-              {
-                success: false,
-                message: "An account with this email address already exists.",
-                data: { action: "SIGN_IN_REQUIRED" },
-                error: {
-                  code: "USER_ALREADY_EXISTS",
-                  message: "An account with this email address already exists.",
-                },
-              },
-              200
-            );
-          }
-
-          newUser = await User.findByIdAndUpdate(
-            concurrentUser._id,
-            {
-              $set: {
-                name,
-                password: hashedPassword,
-                provider: "credentials",
-                isVerified: false,
-              },
-            },
-            { new: true, runValidators: true }
-          );
-        }
-        if (!newUser) throw dbError;
-      }
     }
 
     if (!newUser) {

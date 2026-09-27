@@ -216,6 +216,10 @@ class AuthLogger {
   public static error(event: string, error?: unknown, context?: Record<string, unknown>): void {
     console.error(`[AUTH_ERROR][${new Date().toISOString()}] ${event}`, error ?? "", context ?? "");
   }
+
+  public static warn(event: string, message: string): void {
+    console.warn(`[AUTH_WARN][${new Date().toISOString()}] ${event}: ${message}`);
+  }
 }
 
 // ============================================================================
@@ -743,8 +747,15 @@ function LoginFormInner() {
           router.refresh();
         }
       } catch (err: unknown) {
-        AuthLogger.error("Authentication Exception Encountered", err);
         const message = err instanceof Error ? err.message : "Internal runtime failure.";
+        if (
+          mode === "login" &&
+          /invalid email or password|not verified|google sign-in/i.test(message)
+        ) {
+          AuthLogger.warn("Credentials sign-in rejected", message);
+        } else {
+          AuthLogger.error("Authentication Exception Encountered", err);
+        }
         dispatch({ type: "SET_ERROR", payload: message });
       } finally {
         dispatch({ type: "SET_SUBMITTING", payload: false });
