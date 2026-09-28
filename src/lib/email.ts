@@ -1,58 +1,58 @@
-import nodemailer from "nodemailer";
-
 type EmailPayload = {
   to: string;
   subject: string;
   html: string;
 };
 
-function getTransporter() {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const password = process.env.SMTP_PASS;
+function getBrevoConfig() {
+  const apiKey = process.env.BREVO_API_KEY;
+  const address = process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_FROM;
 
-  if (!host || !user || !password) {
+  if (!apiKey || !address) {
     throw new Error(
-      "SMTP configuration is incomplete. Set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS."
+      "Brevo configuration is incomplete. Set BREVO_API_KEY and EMAIL_FROM_ADDRESS."
     );
   }
 
-  const port = Number(process.env.SMTP_PORT || 587);
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
-    auth: { user, pass: password },
-  });
-}
-
-function getSender(): string {
-  const configuredSender = process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_FROM;
-  const address = configuredSender?.match(/<([^>]+)>/)?.[1] || configuredSender;
-  if (!address) {
-    throw new Error(
-      "Email sender is missing. Set EMAIL_FROM_ADDRESS to a verified sender address."
-    );
-  }
-
-  const name =
-    process.env.EMAIL_FROM_NAME ||
-    (configuredSender?.match(/^([^<]+)</)?.[1]?.trim() || "MoneyPlant");
-  return `${name} <${address}>`;
+  return {
+    apiKey,
+    sender: {
+      email: address.match(/<([^>]+)>/)?.[1]?.trim() || address.trim(),
+      name: process.env.EMAIL_FROM_NAME || "MoneyPlant",
+    },
+  };
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<void> {
-  const transporter = getTransporter();
-  await transporter.sendMail({
-    from: getSender(),
-    to: payload.to,
-    subject: payload.subject,
-    html: payload.html,
+  const config = getBrevoConfig();
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": config.apiKey,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: config.sender,
+      to: [{ email: payload.to.trim() }],
+      subject: payload.subject,
+      htmlContent: payload.html,
+    }),
+    cache: "no-store",
   });
+
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const body = (await response.json()) as { message?: string; code?: string };
+      detail = [body.code, body.message].filter(Boolean).join(": ");
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    throw new Error(
+      `Brevo email API returned ${response.status}${detail ? `: ${detail}` : ""}`
+    );
+  }
 }
 
 export async function sendVerificationOTP(email: string, otp: string) {

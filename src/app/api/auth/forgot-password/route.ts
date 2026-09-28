@@ -251,14 +251,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     // 1. Validate Critical System Dependencies
     if (
-      !process.env.SMTP_HOST ||
-      !process.env.SMTP_USER ||
-      !process.env.SMTP_PASS ||
+      !process.env.BREVO_API_KEY ||
       !(process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_FROM)
     ) {
       AuditLogger.log("ERROR", "Missing critical SMTP email environment variables", {
         requestId,
-        action: "CRITICAL_ENV_MISSING",
+        action: "CRITICAL_BREVO_ENV_MISSING",
       });
 
       // Do not reveal internal configuration to callers. Return a generic success

@@ -29,10 +29,10 @@ function getEmailDeliveryMessage(error: unknown): string {
   }
 
   if (normalized.includes("api key") || normalized.includes("unauthorized")) {
-    return "The Brevo SMTP credentials are missing, invalid, or unavailable in the deployed environment.";
+    return "The Brevo API key is missing, invalid, or unavailable in the deployed environment.";
   }
 
-  return "The verification email could not be sent. Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM_ADDRESS in the deployment environment.";
+  return "The verification email could not be sent. Check BREVO_API_KEY and EMAIL_FROM_ADDRESS in the deployment environment.";
 }
 
 export async function POST(req: NextRequest) {
