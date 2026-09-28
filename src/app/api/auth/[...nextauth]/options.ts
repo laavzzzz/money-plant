@@ -44,7 +44,11 @@ declare module "next-auth/jwt" {
   }
 }
 
-type IUserWithId = IUser & { _id: unknown; role?: string };
+type IUserWithId = IUser & {
+  _id: unknown;
+  role?: string;
+  passwordHash?: string | null;
+};
 
 // ============================================================================
 // ENVIRONMENT VARIABLE VALIDATION & CONFIGURATION
@@ -141,11 +145,14 @@ export const authOptions: NextAuthOptions = {
         // 2. Fetch user profile with explicit password selection
         const user = (await UserModel.findOne({
           email: normalizedEmail,
-        }).select("+password +role")) as IUserWithId | null;
+        }).select("+password passwordHash +role")) as IUserWithId | null;
 
         // 3. Mitigate timing attacks if user does not exist
         if (!user) {
           await bcrypt.compare(credentials.password, DUMMY_BCRYPT_HASH);
+          logAuthEvent("WARN", "Credentials sign-in rejected: account not found", {
+            email: `${normalizedEmail.slice(0, 2)}***`,
+          });
           throw new Error("Invalid email or password.");
         }
 
@@ -158,18 +165,25 @@ export const authOptions: NextAuthOptions = {
 
         // 5. Verify email verification status
         if (!user.isVerified) {
+          logAuthEvent("WARN", "Credentials sign-in rejected: email is not verified", {
+            userId: toObjectIdString(user._id),
+          });
           throw new Error(
             "Your email address is not verified. Please verify your OTP to continue."
           );
         }
 
         // 6. Perform bcrypt password validation
+        const storedPasswordHash = user.password || user.passwordHash || "";
         const isPasswordCorrect = await bcrypt.compare(
           credentials.password,
-          user.password || ""
+          storedPasswordHash
         );
 
         if (!isPasswordCorrect) {
+          logAuthEvent("WARN", "Credentials sign-in rejected: password mismatch", {
+            userId: toObjectIdString(user._id),
+          });
           throw new Error("Invalid email or password.");
         }
 

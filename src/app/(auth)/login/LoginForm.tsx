@@ -749,6 +749,26 @@ export default function LoginForm() {
         const message = err instanceof Error ? err.message : "Internal runtime failure.";
         if (
           mode === "login" &&
+          /not verified|verify your otp|verify your email/i.test(message)
+        ) {
+          try {
+            await executeResendOtp(email);
+            dispatch({ type: "SET_STEP", payload: "otp" });
+            dispatch({
+              type: "SET_SUCCESS",
+              payload: "Your account is not verified. A new verification code was sent to your email.",
+            });
+            return;
+          } catch (resendError) {
+            const resendMessage =
+              resendError instanceof Error
+                ? resendError.message
+                : "Your account is not verified. Please request a new verification code.";
+            dispatch({ type: "SET_ERROR", payload: resendMessage });
+          }
+        }
+        if (
+          mode === "login" &&
           /invalid email or password|not verified|google sign-in/i.test(message)
         ) {
           AuthLogger.warn("Credentials sign-in rejected", message);
