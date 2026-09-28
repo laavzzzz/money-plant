@@ -64,15 +64,23 @@ export async function POST(req: NextRequest) {
     const user = await User.findOne({ email });
     if (!user) {
       return authJsonResponse(
-        { success: false, message: "No account found associated with this email address." },
+        {
+          success: false,
+          message: "No account found associated with this email address.",
+          error: { code: "ACCOUNT_NOT_FOUND" },
+        },
         404
       );
     }
 
     if (user.isVerified) {
       return authJsonResponse(
-        { success: false, message: "Account is already verified. Please sign in." },
-        400
+        {
+          success: true,
+          message: "This account is already verified. Please sign in.",
+          data: { alreadyVerified: true, email },
+        },
+        200
       );
     }
 
@@ -92,6 +100,7 @@ export async function POST(req: NextRequest) {
             success: false,
             message: `Please wait ${retryAfter} second${retryAfter === 1 ? "" : "s"} before requesting a new code.`,
             retryAfter,
+            error: { code: "OTP_COOLDOWN" },
           },
           429,
           { "Retry-After": String(retryAfter) }

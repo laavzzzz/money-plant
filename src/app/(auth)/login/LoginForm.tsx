@@ -329,7 +329,7 @@ async function executeOtpVerification(payload: { email: string; otp: string }): 
   }
 }
 
-async function executeResendOtp(email: string): Promise<void> {
+async function executeResendOtp(email: string): Promise<{ alreadyVerified?: boolean }> {
   const response = await fetch(RESEND_OTP_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -341,6 +341,8 @@ async function executeResendOtp(email: string): Promise<void> {
   if (!response.ok) {
     throw new Error(data.message || "Failed to resend verification passcode.");
   }
+
+  return data?.data || {};
 }
 
 async function executeForgotPassword(email: string): Promise<void> {
@@ -768,12 +770,16 @@ export default function LoginForm() {
           /not verified|verify your otp|verify your email/i.test(message)
         ) {
           try {
-            await executeResendOtp(email);
-            dispatch({ type: "SET_STEP", payload: "otp" });
-            dispatch({
-              type: "SET_SUCCESS",
-              payload: "Your account is not verified. A new verification code was sent to your email.",
-            });
+            const resendResult = await executeResendOtp(email);
+            if (resendResult.alreadyVerified) {
+              dispatch({ type: "SET_ERROR", payload: "Your account is already verified. Please sign in." });
+            } else {
+              dispatch({ type: "SET_STEP", payload: "otp" });
+              dispatch({
+                type: "SET_SUCCESS",
+                payload: "Your account is not verified. A new verification code was sent to your email.",
+              });
+            }
             return;
           } catch (resendError) {
             const resendMessage =
