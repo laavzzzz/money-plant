@@ -83,6 +83,7 @@ const PUBLIC_BYPASS_SET = new Set([
   "/icons",
   "/api/auth",
   "/api/health",
+  "/api/test-db",
 ]);
 
 /** Public guest-only route list */
