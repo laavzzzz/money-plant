@@ -23,7 +23,9 @@ function getBrevoConfig() {
   };
 }
 
-export async function sendEmail(payload: EmailPayload): Promise<void> {
+export async function sendEmail(
+  payload: EmailPayload
+): Promise<{ messageId?: string }> {
   const config = getBrevoConfig();
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -53,6 +55,11 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
       `Brevo email API returned ${response.status}${detail ? `: ${detail}` : ""}`
     );
   }
+
+  const result = (await response.json().catch(() => ({}))) as {
+    messageId?: string;
+  };
+  return { messageId: result.messageId };
 }
 
 export async function sendVerificationOTP(email: string, otp: string) {

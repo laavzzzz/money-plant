@@ -278,6 +278,7 @@ class AuthValidator {
 
 type RegistrationResult =
   | { status: "created" }
+  | { status: "email_failed"; message: string }
   | { status: "existing"; message: string };
 
 async function executeRegistration(
@@ -300,6 +301,15 @@ async function executeRegistration(
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Account registration failed."));
+  }
+
+  if (data?.data?.emailDeliveryFailed) {
+    return {
+      status: "email_failed",
+      message:
+        data?.error?.message ||
+        "Your account was created, but the verification email could not be delivered. Use resend to try again.",
+    };
   }
 
   return { status: "created" };
@@ -727,6 +737,12 @@ export default function LoginForm() {
 
           if (registration.status === "existing") {
             dispatch({ type: "SWITCH_TO_LOGIN" });
+            return;
+          }
+
+          if (registration.status === "email_failed") {
+            dispatch({ type: "SET_STEP", payload: "otp" });
+            dispatch({ type: "SET_ERROR", payload: registration.message });
             return;
           }
           

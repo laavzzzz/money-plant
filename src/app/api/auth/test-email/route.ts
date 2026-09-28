@@ -24,7 +24,8 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      message: "Brevo email API delivery works correctly.",
+      message: "Brevo accepted the test email through its HTTP API.",
+      messageId: data.messageId,
       data 
     });
   } catch (err: any) {
