@@ -235,26 +235,75 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse>> {
         isVerified: false,
       });
     } catch (dbError: unknown) {
-      if (
-        typeof dbError !== "object" ||
-        dbError === null ||
-        !("code" in dbError) ||
-        (dbError as { code: number }).code !== 11000
-      ) {
+      const duplicateError =
+        typeof dbError === "object" && dbError !== null && "code" in dbError
+          ? (dbError as {
+              code?: number;
+              keyPattern?: Record<string, unknown>;
+              keyValue?: Record<string, unknown>;
+              errmsg?: string;
+            })
+          : null;
+
+      if (!duplicateError || duplicateError.code !== 11000) {
         throw dbError;
       }
 
-      // A real duplicate-key collision means another account already owns
-      // this email. Reuse only an unverified credentials account.
+      const conflictingFields = Object.keys(duplicateError.keyPattern || {});
+      const isEmailConflict =
+        conflictingFields.length === 0 || conflictingFields.includes("email");
+
+      // Only an email-index collision can mean that this email is already
+      // registered. Never report an unrelated/stale unique-index collision
+      // as an account conflict.
       const existingUser = await User.findOne({ email: normalizedEmail }).select(
         "_id isVerified provider"
       );
 
-      if (
-        !existingUser ||
-        existingUser.isVerified ||
-        existingUser.provider === "google"
-      ) {
+      if (!isEmailConflict) {
+        Logger.error("AUTH_REGISTER_UNEXPECTED_DUPLICATE_INDEX", {
+          correlationId,
+          fields: conflictingFields,
+          keyValue: duplicateError.keyValue,
+          message: duplicateError.errmsg,
+        });
+        return createJsonResponse(
+          {
+            success: false,
+            message: "Registration is temporarily unavailable. Please try again.",
+            error: {
+              code: "DUPLICATE_INDEX_CONFLICT",
+              message: "A database uniqueness constraint blocked registration.",
+              correlationId,
+            },
+          },
+          503
+        );
+      }
+
+      if (!existingUser) {
+        Logger.error("AUTH_REGISTER_EMAIL_INDEX_WITHOUT_USER", {
+          correlationId,
+          email: normalizedEmail.replace(/(^.).*(@.*$)/, "$1***$2"),
+          keyValue: duplicateError.keyValue,
+          message: duplicateError.errmsg,
+        });
+        return createJsonResponse(
+          {
+            success: false,
+            message:
+              "Registration could not be completed because the database has an inconsistent email index. Please contact support.",
+            error: {
+              code: "EMAIL_INDEX_INCONSISTENT",
+              message: "The email uniqueness index is inconsistent with the user record.",
+              correlationId,
+            },
+          },
+          503
+        );
+      }
+
+      if (existingUser.isVerified || existingUser.provider === "google") {
         return createJsonResponse(
           {
             success: false,

@@ -3,11 +3,13 @@ import dbConnect from "@/lib/dbConnect";
 
 export async function GET() {
   try {
-    await dbConnect();
+    const connection = await dbConnect();
 
     return NextResponse.json({
       success: true,
       message: "MongoDB Connected Successfully",
+      database: connection.connection.name,
+      userCollection: "users",
     });
   } catch (err) {
     console.error("MongoDB connectivity check failed:", err);
