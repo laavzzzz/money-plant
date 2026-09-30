@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
           success: true,
           message: "This account is already verified. Please sign in.",
           data: { alreadyVerified: true, email },
+          error: { code: "ALREADY_VERIFIED", message: "Account is already verified." },
         },
         200
       );

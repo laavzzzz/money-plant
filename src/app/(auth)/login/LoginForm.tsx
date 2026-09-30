@@ -338,8 +338,23 @@ async function executeResendOtp(email: string): Promise<{ alreadyVerified?: bool
 
   const data = await response.json();
 
+  const responseMessage =
+    typeof data?.message === "string" ? data.message : "";
+  const responseCode =
+    typeof data?.error?.code === "string" ? data.error.code : "";
+
+  // Accept the legacy deployed endpoint response so an already-verified
+  // account is not shown as a resend failure during rollout.
+  if (
+    data?.data?.alreadyVerified === true ||
+    responseCode === "ALREADY_VERIFIED" ||
+    /already verified/i.test(responseMessage)
+  ) {
+    return { alreadyVerified: true };
+  }
+
   if (!response.ok) {
-    throw new Error(data.message || "Failed to resend verification passcode.");
+    throw new Error(responseMessage || "Failed to resend verification passcode.");
   }
 
   return data?.data || {};
